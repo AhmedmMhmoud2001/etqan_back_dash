@@ -1,0 +1,625 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  DOCTOR
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY       // Little to no exercise
+  LIGHT           // 1-3 days/week
+  MODERATE        // 3-5 days/week
+  ACTIVE          // 6-7 days/week
+  VERY_ACTIVE     // Athlete level
+}
+
+enum MeasurementSystem {
+  METRIC
+  IMPERIAL
+}
+
+enum Goal {
+  LOSE_WEIGHT
+  MAINTAIN
+  BUILD_MUSCLE
+}
+
+enum MealType {
+  BREAKFAST  // فطار
+  SNACK      // سناك
+  LUNCH      // غداء
+  DINNER     // عشاء
+}
+
+enum PlanSlotType {
+  BREAKFAST
+  SNACK
+  LUNCH
+  DINNER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // المريض له دكتور واحد (جدول Doctor منفصل)
+  doctorId    String?
+  doctor      Doctor? @relation("DoctorPatients", fields: [doctorId], references: [id], onDelete: SetNull)
+  doctorProfile Doctor? @relation("DoctorAccount") // عندما يكون المستخدم دكتوراً (سجل Doctor المرتبط)
+
+  profile   Profile?
+  otps      Otp[]
+
+  // Community
+  posts       Post[]
+  comments    Comment[]
+  postLikes   PostLike[]
+  postShares  PostShare[]
+  followers   Follow[]  @relation("Following")   // من يتابعني (followingId = me)
+  following   Follow[]  @relation("Followers")  // من أتابعهم (followerId = me)
+
+  // Chat (المريض فقط له محادثات كـ patient)
+  conversationsAsPatient Conversation[] @relation("ConversationPatient")
+  chatMessages           ChatMessage[]
+
+  // قنوات (دردشة جماعية)
+  channelMessages ChannelMessage[]
+
+  // وجبات أضافها (دكتور أو أدمن)
+  mealsAdded Meal[]
+  // تمارين أضافها (دكتور أو أدمن)
+  exercisesAdded Exercise[]
+
+  // الوجبات اللي المستخدم أكلها (لحساب السعرات والإحصائيات)
+  mealLogs UserMealLog[]
+
+  // خطط التغذية اللي الدكتور حاطها للعميل (المريض)
+  nutritionPlansAsPatient NutritionPlan[]
+
+  // جلسات التمرين للمستخدم
+  workoutSessions WorkoutSession[]
+  // الخطة الأسبوعية للتمارين (الدكتور يحددها للمستخدم)
+  workoutWeeklyPlans UserWeeklyPlan[]
+  // قياسات الجسم (وزن، دهون، عضلات، ماء، خصر) — شاشة Progress
+  measurements Measurement[]
+
+  // الإحالات: كود المستخدم + من أحاله
+  referralCode   String?  @unique
+  referredById   String?
+  referredBy     User?    @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referredUsers  User[]   @relation("Referrals")
+
+  subscription   Subscription?
+  groceryItems   GroceryItem[]
+  doctorNotesAsPatient DoctorNote[]
+  notifications  Notification[]
+}
+
+// إشعارات المستخدم (داخل التطبيق)
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(255)
+  body      String?  @db.Text
+  type      String?  @db.VarChar(50)   // e.g. INFO, REMINDER, ALERT
+  read      Boolean  @default(false)
+  link      String?  @db.VarChar(500)  // رابط عند الضغط على الإشعار
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([userId, read])
+}
+
+// جدول خاص بالدكتور (كل دكتور له حساب User و سجل Doctor)
+model Doctor {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation("DoctorAccount", fields: [userId], references: [id], onDelete: Cascade)
+  title            String?  // e.g. "Fitness Coach"
+  titleAr          String?  // e.g. "طبيب تغذية"
+  specialization   String?
+  specializationAr String?
+  bio              String?  @db.Text
+  bioAr            String?  @db.Text
+  isActive         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patients            User[]             @relation("DoctorPatients")
+  conversations       Conversation[]
+  nutritionPlans      NutritionPlan[]
+  workoutTemplates   WorkoutTemplate[]
+  userWeeklyPlans    UserWeeklyPlan[]
+  doctorNotes        DoctorNote[]
+}
+
+model Profile {
+  id                  String             @id @default(cuid())
+  userId              String             @unique
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // صورة الملف الشخصي (رابط URL)
+  imageUrl            String?
+  // Basic info (Step 1)
+  measurementSystem   MeasurementSystem? @default(METRIC)
+  gender              Gender?
+  age                 Int?
+  height              Float?             // cm
+  weight              Float?             // kg
+  // Step 2
+  activityLevel       ActivityLevel?
+  // Step 3 - Your Goal
+  goal                Goal?
+  targetWeight        Float?             // kg
+  // Step 4 - Dietary preferences (multi-select)
+  dietaryPreferences  Json?              // e.g. ["HIGH_PROTEIN", "KETO"]
+  // Step 4 - Allergies (multi-select + custom)
+  allergies           Json?              // e.g. ["PEANUTS", "TREE_NUTS", "Custom: X"]
+  // Step 6 - Health conditions (optional)
+  healthConditions    Json?              // e.g. ["HIGH_CHOLESTEROL", "HEART_DISEASE"]
+  // تفضيلات الشاشة (Profile screen)
+  notificationsEnabled Boolean?           @default(true)
+  darkMode             Boolean?           @default(false)
+  language             String?            @default("en")  // en, ar
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      String   // e.g. "EMAIL_VERIFICATION", "PASSWORD_RESET"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Community
+model Post {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  imageUrl  String?
+  badge     String?  // e.g. "30 Day Streak"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments  Comment[]
+  likes     PostLike[]
+  shares    PostShare[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model PostShare {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+// Chat: محادثة بين مريض ودكتوره فقط (doctorId = Doctor table)
+model Conversation {
+  id         String   @id @default(cuid())
+  patientId  String
+  patient    User     @relation("ConversationPatient", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId   String
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@unique([patientId, doctorId])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String   @db.Text
+  attachmentUrl  String?
+  attachmentName String?  // e.g. "Updated Meal Plan - Week 4.pdf"
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// قنوات: دردشة جماعية (الأدمن ينشئها، أي مستخدم أو دكتور يرسل)
+model Channel {
+  id            String   @id @default(cuid())
+  name          String
+  nameAr        String?
+  description   String?  @db.Text
+  descriptionAr String?  @db.Text
+  icon          String?  // emoji أو رمز مثل 💪
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages ChannelMessage[]
+}
+
+model ChannelMessage {
+  id             String   @id @default(cuid())
+  channelId      String
+  channel        Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String   @db.Text
+  attachmentUrl  String?
+  attachmentName String?
+  createdAt      DateTime @default(now())
+
+  @@index([channelId, createdAt])
+}
+
+// الوجبات: يضيفها الأدمن أو الدكتور (صنف: فطار، غداء، عشاء)
+model Meal {
+  id               String    @id @default(cuid())
+  name             String
+  nameAr           String?
+  imageUrl         String?
+  prepTimeMinutes  Int       // وقت التحضير بالدقائق
+  calories         Int
+  proteinG         Int
+  carbsG           Int
+  fatsG            Int
+  dietaryTags      Json?     // e.g. ["GLUTEN_FREE", "HIGH_PROTEIN", "LOW_CARB"]
+  mealType         MealType  // BREAKFAST | LUNCH | DINNER
+  addedByUserId    String
+  addedByUser      User      @relation(fields: [addedByUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  ingredients    MealIngredient[]
+  userMealLogs   UserMealLog[]
+  planSlots      NutritionPlanSlot[]
+}
+
+model MealIngredient {
+  id       String @id @default(cuid())
+  mealId   String
+  meal     Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  name     String // e.g. "Chicken breast", "Olive oil"
+  quantity String // e.g. "150", "1"
+  unit     String // e.g. "g", "tbsp", "pcs", "bottle"
+  order    Int    @default(0) // ترتيب العرض
+
+  @@index([mealId])
+}
+
+// تسجيل الوجبات اللي المستخدم أكلها (الوجبة اللي اختارها = اللي اكلها) → للسعرات والإحصائيات
+model UserMealLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealId       String
+  meal         Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  planSlotId   String?  // إن وُجد: الوجبة مسجلة ضمن سلوت الخطة (لعلامة الصح)
+  planSlot     NutritionPlanSlot? @relation(fields: [planSlotId], references: [id], onDelete: SetNull)
+  eatenAt      DateTime @default(now()) // تاريخ ووقت الأكل
+  createdAt    DateTime @default(now())
+
+  @@index([userId, eatenAt])
+  @@index([planSlotId])
+}
+
+// خطة تغذية أسبوعية من الدكتور للعميل
+model NutritionPlan {
+  id                   String   @id @default(cuid())
+  doctorId              String
+  doctor                Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  userId                String   // العميل (المريض)
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate             DateTime // أول يوم في الخطة (مثلاً الاثنين)
+  endDate               DateTime // آخر يوم
+  dailyCalorieTarget    Int      // هدف السعرات اليومي (مثلاً 1800)
+  dailyProteinTarget    Int      // هدف البروتين (غ)
+  dailyCarbsTarget      Int
+  dailyFatsTarget       Int
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  slots NutritionPlanSlot[]
+}
+
+// سلوت وجبة ضمن يوم معين من الخطة (فطار 8:00، سناك 10:30، غداء 13:00، ...)
+model NutritionPlanSlot {
+  id        String        @id @default(cuid())
+  planId    String
+  plan      NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date      DateTime      // يوم السلوت (بدون وقت)
+  slotType  PlanSlotType  // BREAKFAST | SNACK | LUNCH | DINNER
+  time      String        // "08:00", "10:30", "13:00"
+  mealId    String?       // الوجبة المعينة (من جدول Meal)
+  meal      Meal?         @relation(fields: [mealId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+
+  mealLogs UserMealLog[]
+
+  @@index([planId, date])
+}
+
+// ——— التمارين والخطة الأسبوعية وجلسات التمرين ———
+
+enum WorkoutLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum WorkoutSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// التمارين الأساسية (الأدمن/الدكتور يضيفها)
+model Exercise {
+  id               String   @id @default(cuid())
+  name             String
+  nameAr           String?
+  imageUrl         String?
+  description      String?   @db.Text
+  descriptionAr    String?   @db.Text
+  targetMuscles    Json?     // e.g. ["CHEST", "SHOULDER", "TRICEPS"]
+  equipmentNeeded  Json?     // متطلبات التمرين (المعدات): [{ name: "Dumbbells", nameAr: "دمبل" }, ...]
+  addedByUserId    String
+  addedByUser      User      @relation(fields: [addedByUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  templateExercises   WorkoutTemplateExercise[]
+  sessionExercises    WorkoutSessionExercise[]
+}
+
+// قالب تمرين يومي (مثل Upper Body Strength) — الدكتور ينشئه
+model WorkoutTemplate {
+  id               String        @id @default(cuid())
+  name             String
+  nameAr           String?
+  description      String?       @db.Text
+  descriptionAr    String?       @db.Text
+  durationMinutes  Int?           // مدة تقريبية بالدقائق
+  level            WorkoutLevel?  @default(INTERMEDIATE)
+  equipmentNeeded  Json?          // متطلبات التمرين: [{ name: "Dumbbells", nameAr: "دمبل" }, ...]
+  createdByDoctorId String?
+  createdByDoctor  Doctor?       @relation(fields: [createdByDoctorId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  templateExercises WorkoutTemplateExercise[]
+  planDays          UserWeeklyPlanDay[]
+  sessions          WorkoutSession[]
+}
+
+// تمرين داخل قالب: عدد المجموعات، نطاق العدات، وقت الراحة
+model WorkoutTemplateExercise {
+  id                String           @id @default(cuid())
+  workoutTemplateId String
+  workoutTemplate   WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  exerciseId        String
+  exercise          Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  order             Int             @default(0)
+  sets              Int             // عدد المجموعات (e.g. 4)
+  repMin            Int             // أقل عدد عدات (e.g. 8)
+  repMax            Int             // أعلى عدد عدات (e.g. 10)
+  restSeconds       Int             @default(90) // وقت الراحة بين المجموعات
+  createdAt         DateTime        @default(now())
+
+  @@unique([workoutTemplateId, exerciseId])
+  @@index([workoutTemplateId])
+}
+
+// خطة أسبوعية للمستخدم (الدكتور يحدد لكل يوم أي قالب تمرين)
+model UserWeeklyPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  weekStart   DateTime // أول يوم في الأسبوع (مثلاً الاثنين)
+  weekEnd     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  days UserWeeklyPlanDay[]
+
+  @@index([userId, weekStart])
+}
+
+// يوم معين في الخطة الأسبوعية → قالب التمرين المحدد لهذا اليوم
+model UserWeeklyPlanDay {
+  id                  String           @id @default(cuid())
+  userWeeklyPlanId    String
+  userWeeklyPlan      UserWeeklyPlan   @relation(fields: [userWeeklyPlanId], references: [id], onDelete: Cascade)
+  date                DateTime         // تاريخ اليوم
+  workoutTemplateId   String
+  workoutTemplate     WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  order               Int              @default(0)
+  createdAt           DateTime         @default(now())
+
+  sessions WorkoutSession[]
+
+  @@index([userWeeklyPlanId, date])
+}
+
+// جلسة تمرين واحدة (المستخدم بدأ التمرين)
+model WorkoutSession {
+  id                    String               @id @default(cuid())
+  userId                String
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userWeeklyPlanDayId   String?              // إن بدأ من الخطة الأسبوعية
+  userWeeklyPlanDay     UserWeeklyPlanDay?   @relation(fields: [userWeeklyPlanDayId], references: [id], onDelete: SetNull)
+  workoutTemplateId     String
+  workoutTemplate       WorkoutTemplate     @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
+  startedAt             DateTime             @default(now())
+  endedAt               DateTime?
+  status                WorkoutSessionStatus @default(IN_PROGRESS)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  exercises WorkoutSessionExercise[]
+
+  @@index([userId, startedAt])
+}
+
+// تمرين داخل الجلسة (نسخة من قالب التمرين: sets, repMin, repMax, rest)
+model WorkoutSessionExercise {
+  id         String           @id @default(cuid())
+  sessionId String
+  session   WorkoutSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise  Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  order     Int              @default(0)
+  sets      Int
+  repMin    Int
+  repMax    Int
+  restSeconds Int            @default(90)
+  createdAt DateTime         @default(now())
+
+  setsLog WorkoutSessionSet[]
+
+  @@index([sessionId])
+}
+
+// مجموعة واحدة تم تنفيذها — المستخدم يدخل العدات الفعلية
+model WorkoutSessionSet {
+  id                    String                 @id @default(cuid())
+  workoutSessionExerciseId String
+  workoutSessionExercise   WorkoutSessionExercise @relation(fields: [workoutSessionExerciseId], references: [id], onDelete: Cascade)
+  setNumber             Int                    // 1, 2, 3, 4
+  targetRepMin          Int
+  targetRepMax          Int
+  actualReps            Int?                   // العدات اللي المستخدم عملها
+  completedAt           DateTime?              @default(now())
+  createdAt             DateTime               @default(now())
+
+  @@unique([workoutSessionExerciseId, setNumber])
+  @@index([workoutSessionExerciseId])
+}
+
+// قياسات الجسم — Add Measurement / Progress
+model Measurement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measuredAt DateTime @default(now()) // تاريخ ووقت القياس
+  weight      Float    // kg
+  bodyFat     Float?   // %
+  muscleMass  Float?   // kg
+  water       Float?   // %
+  waist       Float?   // cm
+  source      String?  @default("MANUAL") // MANUAL | BIA_SCALE
+  createdAt   DateTime @default(now())
+
+  @@index([userId, measuredAt])
+}
+
+// اشتراك Premium
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+}
+
+model Subscription {
+  id                    String            @id @default(cuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                  SubscriptionPlan  @default(FREE)
+  endsAt                DateTime?         // انتهاء الاشتراك الحالي
+  discountPercentToApply Int?             @default(0)  // خصم الإحالات للتجديد القادم (يُصفّر بعد التطبيق)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([userId])
+}
+
+// قائمة البقالة (Grocery List)
+model GroceryItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  String?  // e.g. "2", "1 kg"
+  checked   Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ملاحظة/مراجعة من الدكتور للمريض (Note from your Doctor)
+model DoctorNote {
+  id        String   @id @default(cuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patientId String
+  patient   User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+}

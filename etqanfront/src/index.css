@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+}
+
+/* الوضع الداكن: الكلاس يُضاف على <html> من ThemeContext — الخلفية والنص يتغيران فوراً */
+html.dark,
+html.dark body,
+html.dark #root {
+  background-color: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+/* السايدبار والهيدر والمحتوى عندما الـ wrapper له class "dark" (من الـ Layout) */
+.dark {
+  background-color: #111827 !important;
+}
+
+.dark aside {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+.dark aside nav a:hover,
+.dark aside button:hover {
+  background-color: #334155 !important;
+}
+
+.dark main,
+.dark main > header {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark main > div {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
