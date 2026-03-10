@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LangContext';
 import { useTranslation } from '../translations';
+import { useSocket } from '../context/SocketContext';
 import { get } from '../api';
 
 // أيقونات السايدبار (SVG) — حجم موحد للقائمة
@@ -111,6 +112,14 @@ export default function AdminLayout() {
     return () => window.removeEventListener('notifications-updated', onNotificationsUpdated);
   }, [fetchUnreadCount]);
 
+  const { socket } = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+    const onNotification = () => fetchUnreadCount();
+    socket.on('notification', onNotification);
+    return () => socket.off('notification', onNotification);
+  }, [socket, fetchUnreadCount]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -130,12 +139,12 @@ export default function AdminLayout() {
   const userInitial = (user.name || user.email || '?').charAt(0).toUpperCase();
 
   return (
-    <div className={`min-h-screen flex bg-gray-100 dark:bg-gray-900 transition-colors ${darkMode ? 'dark' : ''}`}>
-      {/* Sidebar: فاتح في الوضع النهاري، داكن في الوضع الليلي */}
+    <div className={`h-screen flex overflow-hidden bg-gray-100 dark:bg-gray-900 transition-colors ${darkMode ? 'dark' : ''}`}>
+      {/* Sidebar: ارتفاع الشاشة بالكامل، التمرير داخله فقط للقائمة */}
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-20'
-        } flex flex-col transition-all duration-300 ease-in-out
+        } h-full flex flex-col min-h-0 shrink-0 transition-all duration-300 ease-in-out
           bg-slate-100 dark:bg-slate-800
           text-slate-800 dark:text-white
           border-slate-200 dark:border-slate-700 border-e`}
@@ -151,7 +160,7 @@ export default function AdminLayout() {
             {sidebarOpen ? '◀' : '▶'}
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-2 scrollbar-hide">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -190,9 +199,9 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto flex flex-col">
-        <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm flex items-center justify-between">
+      {/* Main content: الهيدر ثابت، التمرير للمحتوى فقط */}
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <header className="shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 shadow-sm flex items-center justify-between">
           <p className="text-slate-600 dark:text-slate-300 text-sm">{t('headerSubtitle')}</p>
           <div className="flex items-center gap-1">
             {/* تحويل اللغة — أيقونة فقط */}
@@ -251,7 +260,7 @@ export default function AdminLayout() {
             </NavLink>
           </div>
         </header>
-        <div className="flex-1 bg-gray-100 dark:bg-gray-900">
+        <div className="flex-1 min-h-0 overflow-auto bg-gray-100 dark:bg-gray-900">
           <Outlet />
         </div>
       </main>

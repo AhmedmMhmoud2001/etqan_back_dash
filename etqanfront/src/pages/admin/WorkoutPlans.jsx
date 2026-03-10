@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { get, post, del } from '../../api';
-import { IconDelete } from '../../components/ActionIcons';
+import { get, post, patch, del } from '../../api';
+import { IconEdit, IconView, IconDelete } from '../../components/ActionIcons';
 
 /** Parse YYYY-MM-DD as local date */
 function parseLocalDate(dateStr) {
@@ -46,6 +46,8 @@ export default function AdminWorkoutPlans() {
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
+  const [viewPlan, setViewPlan] = useState(null);
+  const [editPlan, setEditPlan] = useState(null);
   const [form, setForm] = useState({
     doctorId: '',
     userId: '',
@@ -200,6 +202,64 @@ export default function AdminWorkoutPlans() {
     if (res.ok) loadPlans();
   };
 
+  const openView = (plan) => setViewPlan(plan);
+  const openEdit = async (plan) => {
+    const { res, data } = await get(`/workout-plan/${plan.id}`);
+    if (res.status === 401) { navigate('/login', { replace: true }); return; }
+    if (!res.ok) return;
+    const p = data.data ?? data;
+    const start = p.weekStart ? new Date(p.weekStart) : new Date();
+    const end = p.weekEnd ? new Date(p.weekEnd) : new Date(start);
+    end.setDate(start.getDate() + 6);
+    setForm({
+      doctorId: p.doctorId ?? '',
+      userId: p.userId ?? '',
+      weekStart: toLocalDateString(start),
+      weekEnd: toLocalDateString(end),
+    });
+    const dayData = {};
+    (p.days || []).forEach((d) => {
+      const dateStr = d.date ? toLocalDateString(new Date(d.date)) : null;
+      if (dateStr) {
+        dayData[dateStr] = {
+          exerciseId: d.exerciseId ?? '',
+          sets: d.sets ?? 3,
+          repMin: d.repMin ?? 8,
+          repMax: d.repMax ?? 12,
+        };
+      }
+    });
+    setDayExercises(dayData);
+    setEditPlan({ ...p, id: plan.id });
+    setModal('edit');
+    loadExercises();
+    if (p.doctorId) loadPatientsForDoctor(p.doctorId);
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editPlan) return;
+    setError('');
+    const days = buildDaysPayload();
+    if (days.length === 0) {
+      setError(lang === 'ar' ? 'اختر تمريناً واحداً على الأقل لأحد الأيام' : 'Select at least one exercise for a day');
+      return;
+    }
+    const startD = parseLocalDate(form.weekStart);
+    const endD = form.weekEnd ? parseLocalDate(form.weekEnd) : (() => { const d = new Date(startD); d.setDate(d.getDate() + 6); return d; })();
+    const body = {
+      weekStart: new Date(startD.getFullYear(), startD.getMonth(), startD.getDate(), 12, 0, 0).toISOString(),
+      weekEnd: new Date(endD.getFullYear(), endD.getMonth(), endD.getDate(), 12, 0, 0).toISOString(),
+      days,
+    };
+    const { res, data } = await patch(`/workout-plan/${editPlan.id}`, body);
+    if (res.status === 401) { navigate('/login', { replace: true }); return; }
+    if (!res.ok) { setError(data.message || data.errors?.[0]?.message || 'Failed'); return; }
+    setModal(null);
+    setEditPlan(null);
+    loadPlans();
+  };
+
   const exerciseLabel = (ex) => (ex ? (lang === 'ar' ? ex.nameAr || ex.name : ex.name || ex.nameAr) : '');
 
   return (
@@ -250,7 +310,17 @@ export default function AdminWorkoutPlans() {
                     <td className="px-4 py-3">{plan.weekStart ? new Date(plan.weekStart).toLocaleDateString() : '—'}</td>
                     <td className="px-4 py-3">{plan.weekEnd ? new Date(plan.weekEnd).toLocaleDateString() : '—'}</td>
                     <td className="px-4 py-3 text-end">
-                      <button type="button" onClick={() => handleDelete(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>
+                      <div className="inline-flex items-center gap-1">
+                        <button type="button" onClick={() => openView(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={lang === 'ar' ? 'عرض' : 'View'} aria-label={lang === 'ar' ? 'عرض' : 'View'}>
+                          <IconView />
+                        </button>
+                        <button type="button" onClick={() => openEdit(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}>
+                          <IconEdit />
+                        </button>
+                        <button type="button" onClick={() => handleDelete(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors" title={t('delete')} aria-label={t('delete')}>
+                          <IconDelete />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -260,6 +330,43 @@ export default function AdminWorkoutPlans() {
           </div>
         )}
       </div>
+
+      {viewPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onClick={() => setViewPlan(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full my-8 p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{lang === 'ar' ? 'تفاصيل الخطة' : 'Plan details'}</h2>
+            <dl className="space-y-2 text-sm">
+              <div><dt className="text-slate-500 dark:text-slate-400">{t('doctor')}</dt><dd className="text-slate-800 dark:text-slate-200">{viewPlan.doctor?.user?.name ?? '—'}</dd></div>
+              <div><dt className="text-slate-500 dark:text-slate-400">{t('patient')}</dt><dd className="text-slate-800 dark:text-slate-200">{viewPlan.user?.name ?? '—'}</dd></div>
+              <div><dt className="text-slate-500 dark:text-slate-400">{t('weekStart')}</dt><dd className="text-slate-800 dark:text-slate-200">{viewPlan.weekStart ? new Date(viewPlan.weekStart).toLocaleDateString() : '—'}</dd></div>
+              <div><dt className="text-slate-500 dark:text-slate-400">{t('weekEnd')}</dt><dd className="text-slate-800 dark:text-slate-200">{viewPlan.weekEnd ? new Date(viewPlan.weekEnd).toLocaleDateString() : '—'}</dd></div>
+            </dl>
+            {(viewPlan.days?.length > 0) && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{lang === 'ar' ? 'التمارين حسب اليوم' : 'Exercises by day'}</h3>
+                <ul className="space-y-2">
+                  {viewPlan.days.map((d) => (
+                    <li key={d.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-800 dark:text-slate-200">
+                      <span className="font-medium">{d.date ? new Date(d.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' }) : ''}</span>
+                      <span>—</span>
+                      <span>{exerciseLabel(d.exercise)}</span>
+                      {(d.sets != null || d.repMin != null) && (
+                        <span className="text-slate-600 dark:text-slate-400 text-xs">
+                          {d.sets != null && `${d.sets} ${lang === 'ar' ? 'مجموعات' : 'sets'}`}
+                          {(d.repMin != null || d.repMax != null) && ` · ${d.repMin ?? '?'}–${d.repMax ?? '?'} ${lang === 'ar' ? 'تكرار' : 'reps'}`}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="mt-6 flex justify-end">
+              <button type="button" onClick={() => setViewPlan(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('close') || (lang === 'ar' ? 'إغلاق' : 'Close')}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal === 'create' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onClick={() => setModal(null)}>
@@ -348,6 +455,70 @@ export default function AdminWorkoutPlans() {
 
               <div className="flex gap-2 justify-end pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>
+                <button type="submit" className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">{t('save')}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modal === 'edit' && editPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto" onClick={() => { setModal(null); setEditPlan(null); }}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full my-8 p-6 max-h-[95vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{t('edit')} {t('workoutPlans')}</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('weekStart')}</label>
+                  <input type="date" value={form.weekStart} onChange={(e) => setForm((f) => ({ ...f, weekStart: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('weekEnd')} {lang === 'ar' ? '(اختياري)' : '(optional)'}</label>
+                  <input type="date" value={form.weekEnd} onChange={(e) => setForm((f) => ({ ...f, weekEnd: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+                </div>
+              </div>
+              {daysForForm.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{lang === 'ar' ? 'التمارين لكل يوم' : 'Exercise per day'}</h3>
+                  <div className="space-y-3">
+                    {daysForForm.map((date) => {
+                      const { exerciseId, sets, repMin, repMax } = getDayExercise(date);
+                      return (
+                        <div key={date} className="p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-700/30 space-y-2">
+                          <div className="font-medium text-slate-700 dark:text-slate-200">
+                            {(parseLocalDate(date) || new Date()).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={exerciseId}
+                              onChange={(e) => setDayExercise(date, 'exerciseId', e.target.value)}
+                              className="min-w-[180px] flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 text-sm"
+                            >
+                              <option value="">— {lang === 'ar' ? 'اختر التمرين' : 'Select exercise'} —</option>
+                              {exercises.map((ex) => (
+                                <option key={ex.id} value={ex.id}>{exerciseLabel(ex)}</option>
+                              ))}
+                            </select>
+                            <label className="text-slate-600 dark:text-slate-400 text-sm shrink-0">
+                              {lang === 'ar' ? 'مجموعات' : 'Sets'}
+                              <input type="number" min={1} max={20} value={sets} onChange={(e) => setDayExercise(date, 'sets', parseInt(e.target.value, 10) || 3)} className="w-14 ml-1 rounded border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-2 py-1 text-center text-sm" />
+                            </label>
+                            <label className="text-slate-600 dark:text-slate-400 text-sm shrink-0">
+                              {lang === 'ar' ? 'تكرار' : 'Reps'}
+                              <input type="number" min={1} max={100} value={repMin} onChange={(e) => setDayExercise(date, 'repMin', parseInt(e.target.value, 10) || 8)} className="w-12 ml-1 rounded border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-2 py-1 text-center text-sm" />
+                              <span className="mx-0.5">–</span>
+                              <input type="number" min={1} max={100} value={repMax} onChange={(e) => setDayExercise(date, 'repMax', parseInt(e.target.value, 10) || 12)} className="w-12 rounded border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-2 py-1 text-center text-sm" />
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {error && <div className="p-2 rounded bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm">{error}</div>}
+              <div className="flex gap-2 justify-end pt-2">
+                <button type="button" onClick={() => { setModal(null); setEditPlan(null); }} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>
                 <button type="submit" className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">{t('save')}</button>
               </div>
             </form>

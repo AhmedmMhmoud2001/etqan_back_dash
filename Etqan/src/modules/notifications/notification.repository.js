@@ -61,7 +61,7 @@ const createBroadcast = async ({ title, body, type, link }) => {
     where: { isActive: true },
     select: { id: true },
   });
-  if (users.length === 0) return { count: 0 };
+  if (users.length === 0) return { count: 0, userIds: [] };
   const data = users.map((u) => ({
     userId: u.id,
     title,
@@ -70,7 +70,7 @@ const createBroadcast = async ({ title, body, type, link }) => {
     link: link ?? null,
   }));
   const result = await prisma.notification.createMany({ data });
-  return { count: result.count };
+  return { count: result.count, userIds: users.map((u) => u.id) };
 };
 
 module.exports = {

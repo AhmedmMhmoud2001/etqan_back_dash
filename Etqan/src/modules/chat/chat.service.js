@@ -82,7 +82,7 @@ const getMessages = async (conversationId, userId, page = 1, limit = 50, before)
 };
 
 const sendMessage = async (conversationId, userId, data) => {
-  await getConversationById(conversationId, userId); // يتحقق أن المستخدم مشارك (مريض أو دكتور)
+  const conv = await getConversationById(conversationId, userId); // يتحقق أن المستخدم مشارك (مريض أو دكتور)
   const content = (data.content && data.content.trim()) || '';
   if (!content && !data.attachmentUrl) {
     const err = new Error('Content or attachment is required');
@@ -96,7 +96,12 @@ const sendMessage = async (conversationId, userId, data) => {
     attachmentUrl: data.attachmentUrl || null,
     attachmentName: data.attachmentName || null,
   });
-  return formatMessage(msg);
+  const formatted = formatMessage(msg);
+  try {
+    const socketService = require('../../socket');
+    socketService.emitChatMessage(conv.patientId, conv.doctorId, conversationId, formatted);
+  } catch (_) { /* Socket may not be initialized */ }
+  return formatted;
 };
 
 module.exports = {

@@ -58,7 +58,12 @@ const sendMessage = async (channelId, userId, data) => {
     attachmentUrl: data.attachmentUrl || null,
     attachmentName: data.attachmentName || null,
   });
-  return formatMessage(msg);
+  const formatted = formatMessage(msg);
+  try {
+    const socketService = require('../../socket');
+    socketService.emitChannelMessage(channelId, formatted);
+  } catch (_) { /* Socket may not be initialized */ }
+  return formatted;
 };
 
 // ——— للأدمن فقط

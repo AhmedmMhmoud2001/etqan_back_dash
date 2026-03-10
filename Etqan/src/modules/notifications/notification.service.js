@@ -25,12 +25,22 @@ const getUnreadCount = async (userId) => {
 };
 
 const create = async (data) => {
-  return notificationRepository.create(data);
+  const notification = await notificationRepository.create(data);
+  try {
+    const socketService = require('../../socket');
+    socketService.emitNotification(data.userId, notification);
+  } catch (_) { /* Socket may not be initialized */ }
+  return notification;
 };
 
 /** إرسال إشعار لجميع المستخدمين (عند إضافة/تعديل محتوى: بوست، وجبة، تمرين) */
 const broadcast = async ({ title, body, type, link }) => {
-  return notificationRepository.createBroadcast({ title, body, type, link });
+  const { count, userIds = [] } = await notificationRepository.createBroadcast({ title, body, type, link });
+  try {
+    const socketService = require('../../socket');
+    socketService.emitNotificationToUsers(userIds, { title, body, type, link });
+  } catch (_) { /* Socket may not be initialized */ }
+  return { count };
 };
 
 module.exports = {

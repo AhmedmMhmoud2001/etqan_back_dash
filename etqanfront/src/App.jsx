@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { SocketProvider } from './context/SocketContext';
 import AdminLayout from './layouts/AdminLayout';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -31,7 +32,9 @@ function App() {
         path="/admin"
         element={
           <ProtectedAdmin>
-            <AdminLayout />
+            <SocketProvider>
+              <AdminLayout />
+            </SocketProvider>
           </ProtectedAdmin>
         }
       >
