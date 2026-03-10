@@ -28,10 +28,16 @@ const create = async (data) => {
   return notificationRepository.create(data);
 };
 
+/** إرسال إشعار لجميع المستخدمين (عند إضافة/تعديل محتوى: بوست، وجبة، تمرين) */
+const broadcast = async ({ title, body, type, link }) => {
+  return notificationRepository.createBroadcast({ title, body, type, link });
+};
+
 module.exports = {
   list,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
   create,
+  broadcast,
 };

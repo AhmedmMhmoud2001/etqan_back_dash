@@ -149,7 +149,6 @@ model Doctor {
   patients            User[]             @relation("DoctorPatients")
   conversations       Conversation[]
   nutritionPlans      NutritionPlan[]
-  workoutTemplates   WorkoutTemplate[]
   userWeeklyPlans    UserWeeklyPlan[]
   doctorNotes        DoctorNote[]
 }
@@ -401,12 +400,6 @@ model NutritionPlanSlot {
 
 // ——— التمارين والخطة الأسبوعية وجلسات التمرين ———
 
-enum WorkoutLevel {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
 enum WorkoutSessionStatus {
   IN_PROGRESS
   COMPLETED
@@ -428,49 +421,11 @@ model Exercise {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  templateExercises   WorkoutTemplateExercise[]
   sessionExercises    WorkoutSessionExercise[]
+  planDayExercises    UserWeeklyPlanDay[]
 }
 
-// قالب تمرين يومي (مثل Upper Body Strength) — الدكتور ينشئه
-model WorkoutTemplate {
-  id               String        @id @default(cuid())
-  name             String
-  nameAr           String?
-  description      String?       @db.Text
-  descriptionAr    String?       @db.Text
-  durationMinutes  Int?           // مدة تقريبية بالدقائق
-  level            WorkoutLevel?  @default(INTERMEDIATE)
-  equipmentNeeded  Json?          // متطلبات التمرين: [{ name: "Dumbbells", nameAr: "دمبل" }, ...]
-  createdByDoctorId String?
-  createdByDoctor  Doctor?       @relation(fields: [createdByDoctorId], references: [id], onDelete: SetNull)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  templateExercises WorkoutTemplateExercise[]
-  planDays          UserWeeklyPlanDay[]
-  sessions          WorkoutSession[]
-}
-
-// تمرين داخل قالب: عدد المجموعات، نطاق العدات، وقت الراحة
-model WorkoutTemplateExercise {
-  id                String           @id @default(cuid())
-  workoutTemplateId String
-  workoutTemplate   WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
-  exerciseId        String
-  exercise          Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  order             Int             @default(0)
-  sets              Int             // عدد المجموعات (e.g. 4)
-  repMin            Int             // أقل عدد عدات (e.g. 8)
-  repMax            Int             // أعلى عدد عدات (e.g. 10)
-  restSeconds       Int             @default(90) // وقت الراحة بين المجموعات
-  createdAt         DateTime        @default(now())
-
-  @@unique([workoutTemplateId, exerciseId])
-  @@index([workoutTemplateId])
-}
-
-// خطة أسبوعية للمستخدم (الدكتور يحدد لكل يوم أي قالب تمرين)
+// خطة أسبوعية للمستخدم (الدكتور يحدد لكل يوم التمرين وعدد المجموعات/التكرارات)
 model UserWeeklyPlan {
   id          String   @id @default(cuid())
   userId      String
@@ -487,16 +442,19 @@ model UserWeeklyPlan {
   @@index([userId, weekStart])
 }
 
-// يوم معين في الخطة الأسبوعية → قالب التمرين المحدد لهذا اليوم
+// يوم معين في الخطة الأسبوعية — تمرين واحد مع عدد المجموعات/التكرارات
 model UserWeeklyPlanDay {
-  id                  String           @id @default(cuid())
+  id                  String            @id @default(cuid())
   userWeeklyPlanId    String
-  userWeeklyPlan      UserWeeklyPlan   @relation(fields: [userWeeklyPlanId], references: [id], onDelete: Cascade)
-  date                DateTime         // تاريخ اليوم
-  workoutTemplateId   String
-  workoutTemplate     WorkoutTemplate  @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
-  order               Int              @default(0)
-  createdAt           DateTime         @default(now())
+  userWeeklyPlan      UserWeeklyPlan    @relation(fields: [userWeeklyPlanId], references: [id], onDelete: Cascade)
+  date                DateTime          // تاريخ اليوم
+  exerciseId          String?           // التمرين المحدد لهذا اليوم
+  exercise            Exercise?         @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets                Int?              // عدد المجموعات
+  repMin              Int?              // أدنى تكرار
+  repMax              Int?              // أعلى تكرار
+  order               Int               @default(0)
+  createdAt           DateTime          @default(now())
 
   sessions WorkoutSession[]
 
@@ -510,8 +468,6 @@ model WorkoutSession {
   user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   userWeeklyPlanDayId   String?              // إن بدأ من الخطة الأسبوعية
   userWeeklyPlanDay     UserWeeklyPlanDay?   @relation(fields: [userWeeklyPlanDayId], references: [id], onDelete: SetNull)
-  workoutTemplateId     String
-  workoutTemplate       WorkoutTemplate     @relation(fields: [workoutTemplateId], references: [id], onDelete: Cascade)
   startedAt             DateTime             @default(now())
   endedAt               DateTime?
   status                WorkoutSessionStatus @default(IN_PROGRESS)

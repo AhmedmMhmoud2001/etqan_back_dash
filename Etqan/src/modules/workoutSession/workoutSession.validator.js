@@ -3,8 +3,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const idParam = (name = 'id') => [param(name).trim().notEmpty().withMessage(`${name} is required`)];
 
 const startSessionRules = () => [
-  body('workoutTemplateId').trim().notEmpty().withMessage('workoutTemplateId is required'),
-  body('userWeeklyPlanDayId').optional().trim(),
+  body('userWeeklyPlanDayId').trim().notEmpty().withMessage('userWeeklyPlanDayId is required'),
 ];
 
 const completeSetRules = () => [

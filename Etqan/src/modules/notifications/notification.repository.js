@@ -55,6 +55,24 @@ const create = async (data) => {
   });
 };
 
+/** إنشاء إشعار لجميع المستخدمين (مثلاً عند إضافة/تعديل بوست، وجبة، تمرين) */
+const createBroadcast = async ({ title, body, type, link }) => {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true },
+  });
+  if (users.length === 0) return { count: 0 };
+  const data = users.map((u) => ({
+    userId: u.id,
+    title,
+    body: body ?? null,
+    type: type ?? null,
+    link: link ?? null,
+  }));
+  const result = await prisma.notification.createMany({ data });
+  return { count: result.count };
+};
+
 module.exports = {
   listByUserId,
   findByIdAndUserId,
@@ -62,4 +80,5 @@ module.exports = {
   markAllAsRead,
   getUnreadCount,
   create,
+  createBroadcast,
 };

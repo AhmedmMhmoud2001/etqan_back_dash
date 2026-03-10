@@ -33,7 +33,7 @@ const updateExerciseRules = () => [
 
 const listRules = () => [
   query('search').optional().trim(),
-  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 500 }).toInt(),
   query('offset').optional().isInt({ min: 0 }).toInt(),
 ];
 

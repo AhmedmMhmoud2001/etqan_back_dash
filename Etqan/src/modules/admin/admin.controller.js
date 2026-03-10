@@ -22,6 +22,12 @@ const getUserById = asyncHandler(async (req, res) => {
   success(res, user, 'User details');
 });
 
+const getUserWorkoutSessions = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 30, 50);
+  const sessions = await adminService.getWorkoutSessionsForUser(req.params.id, limit);
+  success(res, { sessions }, 'User workout sessions');
+});
+
 const createUser = asyncHandler(async (req, res) => {
   const user = await adminService.createUser(req.body);
   success(res, user, 'User created', 201);
@@ -96,6 +102,35 @@ const listNutritionPlans = asyncHandler(async (req, res) => {
   success(res, result, 'Nutrition plans list');
 });
 
+const listWorkoutPlans = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 300);
+  const result = await adminService.listAllWorkoutPlans(page, limit);
+  success(res, result, 'Workout plans list');
+});
+
+const listDoctorNotes = asyncHandler(async (req, res) => {
+  const doctorId = req.query.doctorId && req.query.doctorId.trim() ? req.query.doctorId.trim() : null;
+  const patientId = req.query.patientId && req.query.patientId.trim() ? req.query.patientId.trim() : null;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 300);
+  const result = await adminService.listAllDoctorNotes(doctorId, patientId, page, limit);
+  success(res, result, 'Doctor notes list');
+});
+
+const listCommunityPosts = asyncHandler(async (req, res) => {
+  const userId = req.query.userId && req.query.userId.trim() ? req.query.userId.trim() : null;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 300);
+  const result = await adminService.listAllCommunityPosts(userId, page, limit);
+  success(res, result, 'Community posts list');
+});
+
+const deleteCommunityPost = asyncHandler(async (req, res) => {
+  await adminService.deleteCommunityPost(req.params.id);
+  success(res, { id: req.params.id }, 'Post deleted');
+});
+
 const updateUserProfile = asyncHandler(async (req, res) => {
   const profile = await adminService.updateUserProfile(req.params.id, req.body);
   success(res, profile, 'User profile updated');
@@ -105,6 +140,7 @@ module.exports = {
   getDashboard,
   listUsers,
   getUserById,
+  getUserWorkoutSessions,
   createUser,
   updateUser,
   deleteUser,
@@ -119,4 +155,8 @@ module.exports = {
   createNotification,
   updateUserProfile,
   listNutritionPlans,
+  listWorkoutPlans,
+  listDoctorNotes,
+  listCommunityPosts,
+  deleteCommunityPost,
 };

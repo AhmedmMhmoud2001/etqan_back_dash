@@ -238,6 +238,38 @@ const listAllNutritionPlans = async (page = 1, limit = 100) => {
   return adminRepository.listAllNutritionPlans({ skip, take: limit });
 };
 
+const listAllWorkoutPlans = async (page = 1, limit = 200) => {
+  const skip = (Math.max(1, page) - 1) * limit;
+  return adminRepository.listAllWorkoutPlans({ skip, take: limit });
+};
+
+const getWorkoutSessionsForUser = async (userId, limit = 30) => {
+  return adminRepository.getWorkoutSessionsForUser(userId, limit);
+};
+
+const listAllDoctorNotes = async (doctorId = null, patientId = null, page = 1, limit = 200) => {
+  const skip = (Math.max(1, page) - 1) * limit;
+  return adminRepository.listAllDoctorNotes({
+    doctorId: doctorId || undefined,
+    patientId: patientId || undefined,
+    skip,
+    take: limit,
+  });
+};
+
+const listAllCommunityPosts = async (userId = null, page = 1, limit = 200) => {
+  const skip = (Math.max(1, page) - 1) * limit;
+  return adminRepository.listAllCommunityPosts({
+    userId: userId || undefined,
+    skip,
+    take: limit,
+  });
+};
+
+const deleteCommunityPost = async (postId) => {
+  return adminRepository.deleteCommunityPost(postId);
+};
+
 module.exports = {
   getDashboardStats,
   listUsers,
@@ -256,4 +288,9 @@ module.exports = {
   createNotification,
   updateUserProfile,
   listAllNutritionPlans,
+  listAllWorkoutPlans,
+  getWorkoutSessionsForUser,
+  listAllDoctorNotes,
+  listAllCommunityPosts,
+  deleteCommunityPost,
 };

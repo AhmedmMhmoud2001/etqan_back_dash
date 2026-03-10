@@ -9,7 +9,10 @@ const createPlanRules = () => [
   body('doctorId').optional().trim(),
   body('days').optional().isArray(),
   body('days.*.date').optional().isISO8601(),
-  body('days.*.workoutTemplateId').optional().trim().notEmpty(),
+  body('days.*.exerciseId').optional().trim(),
+  body('days.*.sets').optional().isInt({ min: 1, max: 20 }).toInt(),
+  body('days.*.repMin').optional().isInt({ min: 1, max: 100 }).toInt(),
+  body('days.*.repMax').optional().isInt({ min: 1, max: 100 }).toInt(),
   body('days.*.order').optional().isInt({ min: 0 }).toInt(),
 ];
 
@@ -19,7 +22,10 @@ const updatePlanRules = () => [
   body('weekEnd').optional().isISO8601(),
   body('days').optional().isArray(),
   body('days.*.date').optional().isISO8601(),
-  body('days.*.workoutTemplateId').optional().trim().notEmpty(),
+  body('days.*.exerciseId').optional().trim(),
+  body('days.*.sets').optional().isInt({ min: 1, max: 20 }).toInt(),
+  body('days.*.repMin').optional().isInt({ min: 1, max: 100 }).toInt(),
+  body('days.*.repMax').optional().isInt({ min: 1, max: 100 }).toInt(),
   body('days.*.order').optional().isInt({ min: 0 }).toInt(),
 ];
 

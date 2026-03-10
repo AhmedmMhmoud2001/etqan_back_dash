@@ -219,6 +219,7 @@ export default function AdminMeals() {
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
                 <tr>
+                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
                   <th className="px-4 py-3 font-medium">{t('name')}</th>
                   <th className="px-4 py-3 font-medium">{t('mealType')}</th>
                   <th className="px-4 py-3 font-medium">{t('calories')}</th>
@@ -231,6 +232,13 @@ export default function AdminMeals() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
                 {items.map((meal) => (
                   <tr key={meal.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                    <td className="px-4 py-3">
+                      {meal.imageUrl ? (
+                        <img src={meal.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                      ) : (
+                        <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>🍽️</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{meal.name}</td>
                     <td className="px-4 py-3">{t('mealType' + (meal.mealType || '').charAt(0) + (meal.mealType || '').slice(1).toLowerCase())}</td>
                     <td className="px-4 py-3">{meal.calories ?? 0}</td>

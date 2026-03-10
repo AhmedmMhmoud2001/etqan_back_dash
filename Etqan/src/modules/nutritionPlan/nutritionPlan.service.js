@@ -29,10 +29,13 @@ const createPlan = async (data, user) => {
     err.statusCode = 400;
     throw err;
   }
-  return nutritionPlanRepository.create({
-    ...data,
-    doctorId: finalDoctorId,
-  });
+  const payload = { ...data, doctorId: finalDoctorId };
+  if (!payload.endDate && payload.startDate) {
+    const start = new Date(payload.startDate);
+    start.setDate(start.getDate() + 6);
+    payload.endDate = start.toISOString();
+  }
+  return nutritionPlanRepository.create(payload);
 };
 
 const getPlanById = async (id) => {

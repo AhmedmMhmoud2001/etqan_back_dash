@@ -246,27 +246,6 @@ async function main() {
   }
   console.log('Created exercises');
 
-  // ——— قالب تمرين (الدكتور) ———
-  let template = await prisma.workoutTemplate.findFirst({ where: { name: 'Upper Body Strength' } });
-  if (!template) {
-    template = await prisma.workoutTemplate.create({
-    data: {
-      name: 'Upper Body Strength',
-      nameAr: 'قوة الجزء العلوي',
-      durationMinutes: 45,
-      level: 'INTERMEDIATE',
-      createdByDoctorId: doc1.id,
-      templateExercises: {
-        create: [
-          { exerciseId: ex1.id, order: 0, sets: 4, repMin: 8, repMax: 10, restSeconds: 90 },
-          { exerciseId: ex3.id, order: 1, sets: 3, repMin: 6, repMax: 8, restSeconds: 120 },
-        ],
-      },
-    },
-  });
-  }
-  console.log('Created workout template');
-
   // ——— قناة ———
   const existingChannel = await prisma.channel.findFirst({ where: { name: 'مجتمع Etqan' } });
   if (!existingChannel) {
@@ -313,28 +292,28 @@ async function main() {
   }
   console.log('Created nutrition plan');
 
-  // ——— خطة أسبوعية تمارين ———
+  // ——— خطة أسبوعية تمارين (تمرين لكل يوم) ———
   const weekStart = new Date(planStart);
   const weekEndDate = new Date(planStart);
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   const existingWp = await prisma.userWeeklyPlan.findFirst({
     where: { userId: patient1.id, doctorId: doc1.id },
   });
-  if (!existingWp && template) {
+  if (!existingWp && ex1 && ex3) {
     await prisma.userWeeklyPlan.create({
-    data: {
-      userId: patient1.id,
-      doctorId: doc1.id,
-      weekStart,
-      weekEnd: weekEndDate,
-      days: {
-        create: [
-          { date: weekStart, workoutTemplateId: template.id, order: 0 },
-          { date: new Date(weekStart.getTime() + 86400000), workoutTemplateId: template.id, order: 1 },
-        ],
+      data: {
+        userId: patient1.id,
+        doctorId: doc1.id,
+        weekStart,
+        weekEnd: weekEndDate,
+        days: {
+          create: [
+            { date: weekStart, exerciseId: ex1.id, sets: 4, repMin: 8, repMax: 10, order: 0 },
+            { date: new Date(weekStart.getTime() + 86400000), exerciseId: ex3.id, sets: 3, repMin: 6, repMax: 8, order: 1 },
+          ],
+        },
       },
-    },
-  });
+    });
   }
   console.log('Created workout weekly plan');
 

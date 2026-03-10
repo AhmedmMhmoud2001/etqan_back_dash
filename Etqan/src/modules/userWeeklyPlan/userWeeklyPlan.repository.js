@@ -1,29 +1,49 @@
 const { prisma } = require('../../prisma/client');
 
+const dayData = (d, i) => {
+  const base = { date: new Date(d.date), order: d.order ?? i };
+  if (d.exerciseId) {
+    base.exerciseId = d.exerciseId;
+    base.sets = d.sets != null ? d.sets : 3;
+    base.repMin = d.repMin != null ? d.repMin : 8;
+    base.repMax = d.repMax != null ? d.repMax : 12;
+  }
+  return base;
+};
+
+const daysInclude = {
+  include: { exercise: true },
+  orderBy: { date: 'asc' },
+};
+
 const create = async (data) => {
   const { days = [], ...rest } = data;
-  return prisma.userWeeklyPlan.create({
+  const plan = await prisma.userWeeklyPlan.create({
     data: {
       ...rest,
       weekStart: new Date(rest.weekStart),
       weekEnd: new Date(rest.weekEnd),
-      days: {
-        create: days.map((d, i) => ({
-          date: new Date(d.date),
-          workoutTemplateId: d.workoutTemplateId,
-          order: d.order ?? i,
-        })),
-      },
-    },
-    include: {
-      user: { select: { id: true, name: true, email: true } },
-      doctor: { include: { user: { select: { id: true, name: true } } } },
-      days: {
-        include: { workoutTemplate: { include: { templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } } } } },
-        orderBy: { date: 'asc' },
-      },
     },
   });
+  if (days.length > 0) {
+    const toCreate = days
+      .map((d, i) => ({ userWeeklyPlanId: plan.id, ...dayData(d, i) }))
+      .filter((row) => row.exerciseId);
+    if (toCreate.length > 0) {
+      await prisma.userWeeklyPlanDay.createMany({
+        data: toCreate.map(({ date, order, exerciseId, sets, repMin, repMax }) => ({
+          userWeeklyPlanId: plan.id,
+          date,
+          order,
+          exerciseId,
+          sets,
+          repMin,
+          repMax,
+        })),
+      });
+    }
+  }
+  return findById(plan.id);
 };
 
 const findById = async (id) => {
@@ -32,10 +52,7 @@ const findById = async (id) => {
     include: {
       user: { select: { id: true, name: true, email: true } },
       doctor: { include: { user: { select: { id: true, name: true } } } },
-      days: {
-        include: { workoutTemplate: { include: { templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } } } } },
-        orderBy: { date: 'asc' },
-      },
+      days: daysInclude,
     },
   });
 };
@@ -54,10 +71,7 @@ const findCurrentByUserId = async (userId, atDate = new Date()) => {
     },
     include: {
       doctor: { include: { user: { select: { id: true, name: true } } } },
-      days: {
-        include: { workoutTemplate: { include: { templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } } } } },
-        orderBy: { date: 'asc' },
-      },
+      days: daysInclude,
     },
   });
 };
@@ -67,10 +81,7 @@ const findByUserId = async (userId, limit = 10) => {
     where: { userId },
     include: {
       doctor: { include: { user: { select: { id: true, name: true } } } },
-      days: {
-        include: { workoutTemplate: true },
-        orderBy: { date: 'asc' },
-      },
+      days: { include: { exercise: true }, orderBy: { date: 'asc' } },
     },
     orderBy: { weekStart: 'desc' },
     take: limit,
@@ -82,7 +93,7 @@ const findByDoctorId = async (doctorId, limit = 50) => {
     where: { doctorId },
     include: {
       user: { select: { id: true, name: true, email: true } },
-      days: { include: { workoutTemplate: true }, orderBy: { date: 'asc' } },
+      days: { include: { exercise: true }, orderBy: { date: 'asc' } },
     },
     orderBy: { createdAt: 'desc' },
     take: limit,
@@ -97,14 +108,22 @@ const update = async (id, data) => {
   if (days !== undefined) {
     await prisma.userWeeklyPlanDay.deleteMany({ where: { userWeeklyPlanId: id } });
     if (days.length > 0) {
-      await prisma.userWeeklyPlanDay.createMany({
-        data: days.map((d, i) => ({
-          userWeeklyPlanId: id,
-          date: new Date(d.date),
-          workoutTemplateId: d.workoutTemplateId,
-          order: d.order ?? i,
-        })),
-      });
+      const toCreate = days
+        .map((d, i) => ({ userWeeklyPlanId: id, ...dayData(d, i) }))
+        .filter((row) => row.exerciseId);
+      if (toCreate.length > 0) {
+        await prisma.userWeeklyPlanDay.createMany({
+          data: toCreate.map(({ userWeeklyPlanId, date, order, exerciseId, sets, repMin, repMax }) => ({
+            userWeeklyPlanId,
+            date,
+            order,
+            exerciseId,
+            sets,
+            repMin,
+            repMax,
+          })),
+        });
+      }
     }
   }
   return prisma.userWeeklyPlan.update({
@@ -113,10 +132,7 @@ const update = async (id, data) => {
     include: {
       user: { select: { id: true, name: true } },
       doctor: { include: { user: { select: { id: true, name: true } } } },
-      days: {
-        include: { workoutTemplate: { include: { templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } } } } },
-        orderBy: { date: 'asc' },
-      },
+      days: daysInclude,
     },
   });
 };
@@ -137,11 +153,7 @@ const getDayByPlanAndDate = async (planId, date) => {
     },
     include: {
       userWeeklyPlan: { include: { doctor: { include: { user: { select: { id: true, name: true } } } } } },
-      workoutTemplate: {
-        include: {
-          templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } },
-        },
-      },
+      exercise: true,
     },
   });
 };

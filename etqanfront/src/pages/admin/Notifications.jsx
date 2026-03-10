@@ -60,6 +60,7 @@ export default function AdminNotifications() {
     if (res.ok) {
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       loadUnreadCount();
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     }
   };
 
@@ -72,6 +73,7 @@ export default function AdminNotifications() {
     if (res.ok) {
       loadNotifications();
       setUnreadCount(0);
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     }
   };
 

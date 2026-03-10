@@ -1,32 +1,34 @@
 const { prisma } = require('../../prisma/client');
 
-/** إنشاء جلسة من قالب مع نسخ التمارين (exercises مع sets, repMin, repMax, restSeconds) */
-const createFromTemplate = async (userId, workoutTemplateId, userWeeklyPlanDayId = null) => {
-  const template = await prisma.workoutTemplate.findUnique({
-    where: { id: workoutTemplateId },
-    include: { templateExercises: { include: { exercise: true }, orderBy: { order: 'asc' } } },
+/** إنشاء جلسة من يوم خطة فيه تمرين واحد */
+const createFromPlanDay = async (userId, planDayId) => {
+  const day = await prisma.userWeeklyPlanDay.findUnique({
+    where: { id: planDayId },
+    include: { exercise: true, userWeeklyPlan: true },
   });
-  if (!template) return null;
+  if (!day || day.userWeeklyPlan.userId !== userId) return null;
+  if (!day.exerciseId || !day.exercise) return null;
+  const sets = day.sets ?? 3;
+  const repMin = day.repMin ?? 8;
+  const repMax = day.repMax ?? 12;
 
   const session = await prisma.workoutSession.create({
     data: {
       userId,
-      workoutTemplateId,
-      userWeeklyPlanDayId: userWeeklyPlanDayId || null,
+      userWeeklyPlanDayId: planDayId,
       status: 'IN_PROGRESS',
       exercises: {
-        create: template.templateExercises.map((te) => ({
-          exerciseId: te.exerciseId,
-          order: te.order,
-          sets: te.sets,
-          repMin: te.repMin,
-          repMax: te.repMax,
-          restSeconds: te.restSeconds,
-        })),
+        create: [{
+          exerciseId: day.exerciseId,
+          order: 0,
+          sets,
+          repMin,
+          repMax,
+          restSeconds: 90,
+        }],
       },
     },
     include: {
-      workoutTemplate: true,
       userWeeklyPlanDay: true,
       exercises: {
         include: { exercise: true },
@@ -35,15 +37,14 @@ const createFromTemplate = async (userId, workoutTemplateId, userWeeklyPlanDayId
     },
   });
 
-  // إنشاء سجلات المجموعات (WorkoutSessionSet) لكل مجموعة في كل تمرين
   for (const se of session.exercises) {
     const setsToCreate = [];
     for (let i = 1; i <= se.sets; i++) {
       setsToCreate.push({
         workoutSessionExerciseId: se.id,
         setNumber: i,
-        targetRepMin: se.repMin,
-        targetRepMax: se.repMax,
+        targetRepMin: repMin,
+        targetRepMax: repMax,
       });
     }
     await prisma.workoutSessionSet.createMany({ data: setsToCreate });
@@ -52,7 +53,6 @@ const createFromTemplate = async (userId, workoutTemplateId, userWeeklyPlanDayId
   return prisma.workoutSession.findUnique({
     where: { id: session.id },
     include: {
-      workoutTemplate: true,
       userWeeklyPlanDay: true,
       exercises: {
         include: {
@@ -70,7 +70,6 @@ const findById = async (id) => {
     where: { id },
     include: {
       user: { select: { id: true, name: true } },
-      workoutTemplate: true,
       userWeeklyPlanDay: true,
       exercises: {
         include: {
@@ -91,7 +90,6 @@ const findByUserId = async (userId, filters = {}) => {
     prisma.workoutSession.findMany({
       where,
       include: {
-        workoutTemplate: true,
         userWeeklyPlanDay: true,
         exercises: {
           include: { exercise: true, setsLog: true },
@@ -112,7 +110,6 @@ const endSession = async (id, status = 'COMPLETED') => {
     where: { id },
     data: { endedAt: new Date(), status },
     include: {
-      workoutTemplate: true,
       exercises: {
         include: { exercise: true, setsLog: { orderBy: { setNumber: 'asc' } } },
         orderBy: { order: 'asc' },
@@ -147,7 +144,7 @@ const getSessionExerciseById = async (sessionExerciseId) => {
 };
 
 module.exports = {
-  createFromTemplate,
+  createFromPlanDay,
   findById,
   findByUserId,
   endSession,

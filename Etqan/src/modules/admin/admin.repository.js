@@ -1,15 +1,41 @@
 const { prisma } = require('../../prisma/client');
 
 const getStats = async () => {
-  const [usersCount, doctorsCount, adminsCount, mealsCount, exercisesCount, channelsCount] = await Promise.all([
+  const [
+    usersCount,
+    doctorsCount,
+    adminsCount,
+    mealsCount,
+    exercisesCount,
+    channelsCount,
+    postsCount,
+    nutritionPlansCount,
+    workoutPlansCount,
+    doctorNotesCount,
+  ] = await Promise.all([
     prisma.user.count({ where: { role: 'USER' } }),
     prisma.doctor.count(),
     prisma.user.count({ where: { role: 'ADMIN' } }),
     prisma.meal.count(),
     prisma.exercise.count(),
     prisma.channel.count(),
+    prisma.post.count(),
+    prisma.nutritionPlan.count(),
+    prisma.userWeeklyPlan.count(),
+    prisma.doctorNote.count(),
   ]);
-  return { usersCount, doctorsCount, adminsCount, mealsCount, exercisesCount, channelsCount };
+  return {
+    usersCount,
+    doctorsCount,
+    adminsCount,
+    mealsCount,
+    exercisesCount,
+    channelsCount,
+    postsCount,
+    nutritionPlansCount,
+    workoutPlansCount,
+    doctorNotesCount,
+  };
 };
 
 const userInclude = { profile: true, doctor: { select: { id: true, title: true, user: { select: { id: true, name: true, email: true } } } } };
@@ -241,6 +267,84 @@ const listAllNutritionPlans = async (params = {}) => {
   return { items, total };
 };
 
+const listAllWorkoutPlans = async (params = {}) => {
+  const { skip = 0, take = 200 } = params;
+  const items = await prisma.userWeeklyPlan.findMany({
+    skip,
+    take,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      doctor: { include: { user: { select: { id: true, name: true, email: true } } } },
+      user: { select: { id: true, name: true, email: true } },
+      days: { include: { exercise: true }, orderBy: { date: 'asc' } },
+    },
+  });
+  const total = await prisma.userWeeklyPlan.count();
+  return { items, total };
+};
+
+const getWorkoutSessionsForUser = async (userId, limit = 30) => {
+  return prisma.workoutSession.findMany({
+    where: { userId },
+    take: limit,
+    orderBy: { startedAt: 'desc' },
+    include: {
+      exercises: {
+        include: {
+          exercise: { select: { id: true, name: true, nameAr: true } },
+          setsLog: { orderBy: { setNumber: 'asc' } },
+        },
+        orderBy: { order: 'asc' },
+      },
+    },
+  });
+};
+
+const listAllDoctorNotes = async (params = {}) => {
+  const { doctorId, patientId, skip = 0, take = 200 } = params;
+  const where = {};
+  if (doctorId) where.doctorId = doctorId;
+  if (patientId) where.patientId = patientId;
+  const [items, total] = await Promise.all([
+    prisma.doctorNote.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        doctor: { include: { user: { select: { id: true, name: true, email: true } } } },
+        patient: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    prisma.doctorNote.count({ where }),
+  ]);
+  return { items, total };
+};
+
+const listAllCommunityPosts = async (params = {}) => {
+  const { userId, skip = 0, take = 200 } = params;
+  const where = {};
+  if (userId) where.userId = userId;
+  const [items, total] = await Promise.all([
+    prisma.post.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        _count: { select: { likes: true, comments: true, shares: true } },
+      },
+    }),
+    prisma.post.count({ where }),
+  ]);
+  return { items, total };
+};
+
+const deleteCommunityPost = async (postId) => {
+  return prisma.post.delete({ where: { id: postId } });
+};
+
 module.exports = {
   getStats,
   listUsers,
@@ -259,4 +363,9 @@ module.exports = {
   updateDoctor,
   deleteDoctor,
   listAllNutritionPlans,
+  listAllWorkoutPlans,
+  getWorkoutSessionsForUser,
+  listAllDoctorNotes,
+  listAllCommunityPosts,
+  deleteCommunityPost,
 };

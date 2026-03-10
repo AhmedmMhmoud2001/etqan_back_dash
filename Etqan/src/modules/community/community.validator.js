@@ -2,7 +2,7 @@ const { body, param, validationResult } = require('express-validator');
 
 const createPostRules = () => [
   body('content').trim().notEmpty().withMessage('Content is required').isLength({ max: 10000 }).withMessage('Content too long'),
-  body('imageUrl').optional().trim().isURL().withMessage('Invalid image URL'),
+  body('imageUrl').optional().trim().custom((v) => !v || v.startsWith('/') || /^https?:\/\//i.test(v)).withMessage('imageUrl must be a URL or path'),
   body('badge').optional().trim().isLength({ max: 200 }),
 ];
 

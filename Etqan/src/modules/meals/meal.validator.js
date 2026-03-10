@@ -6,7 +6,7 @@ const idParam = () => [param('id').trim().notEmpty().withMessage('Meal id is req
 const listRules = () => [
   query('mealType').optional().isIn(MEAL_TYPES).withMessage('mealType must be BREAKFAST, SNACK, LUNCH, or DINNER'),
   query('page').optional().isInt({ min: 1 }).toInt(),
-  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 500 }).toInt(),
 ];
 
 const ingredientRules = () => [

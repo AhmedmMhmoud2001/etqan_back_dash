@@ -8,14 +8,28 @@ import { IconEdit, IconDelete } from '../../components/ActionIcons';
 const SLOT_TYPES = ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'];
 const SLOT_TIMES = { BREAKFAST: '08:00', SNACK: '10:30', LUNCH: '13:00', DINNER: '19:00' };
 
+/** Parse YYYY-MM-DD as local date to avoid timezone shifting the day */
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+function toLocalDateString(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getDaysBetween(start, end) {
   const days = [];
-  const d = new Date(start);
-  d.setHours(0, 0, 0, 0);
-  const endDate = new Date(end);
-  endDate.setHours(23, 59, 59, 999);
+  const d = parseLocalDate(start);
+  const endDate = parseLocalDate(end);
+  if (!d || !endDate) return [];
   while (d <= endDate) {
-    days.push(d.toISOString().slice(0, 10));
+    days.push(toLocalDateString(d));
     d.setDate(d.getDate() + 1);
   }
   return days;
@@ -42,10 +56,13 @@ function groupSlotsByDay(slots) {
   const byDay = {};
   (slots || []).forEach((s) => {
     const raw = s.date;
-    const d = typeof raw === 'string' ? raw.slice(0, 10) : (raw ? new Date(raw).toISOString().slice(0, 10) : '');
+    let d;
+    if (typeof raw === 'string') d = raw.slice(0, 10);
+    else if (raw) { const x = new Date(raw); d = toLocalDateString(x); }
+    else d = '';
     if (!d) return;
     if (!byDay[d]) byDay[d] = {};
-    byDay[d][s.slotType] = { ...s, mealId: s.mealId || '' };
+    byDay[d][s.slotType] = { ...s, mealId: s.mealId != null ? String(s.mealId) : '' };
   });
   return byDay;
 }
@@ -78,7 +95,7 @@ export default function AdminNutritionPlans() {
 
   const mealsMap = useMemo(() => {
     const m = new Map();
-    meals.forEach((meal) => m.set(meal.id, meal));
+    meals.forEach((meal) => m.set(String(meal.id), meal));
     return m;
   }, [meals]);
 
@@ -128,14 +145,12 @@ export default function AdminNutritionPlans() {
   useEffect(() => { if (modal) loadMeals(); }, [modal]);
 
   const openCreate = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 6);
+    const today = toLocalDateString(new Date());
     setForm({
       doctorId: '',
       userId: '',
       startDate: today,
-      endDate: nextWeek.toISOString().slice(0, 10),
+      endDate: '', // اختياري — يُحسب أسبوع من تاريخ البداية تلقائياً
       dailyCalorieTarget: 2000,
       dailyProteinTarget: 100,
       dailyCarbsTarget: 250,
@@ -148,16 +163,23 @@ export default function AdminNutritionPlans() {
   };
 
   const daysForForm = useMemo(() => {
-    if (!form.startDate || !form.endDate) return [];
-    return getDaysBetween(form.startDate, form.endDate);
+    if (!form.startDate) return [];
+    const end = form.endDate || toLocalDateString((() => {
+      const d = parseLocalDate(form.startDate);
+      if (!d) return new Date();
+      d.setDate(d.getDate() + 6);
+      return d;
+    })());
+    return getDaysBetween(form.startDate, end);
   }, [form.startDate, form.endDate]);
 
   const setSlotMeal = (date, slotType, mealId) => {
-    setSlotMealIds((prev) => ({ ...prev, [`${date}_${slotType}`]: mealId }));
+    setSlotMealIds((prev) => ({ ...prev, [`${date}_${slotType}`]: mealId || '' }));
   };
 
   const getSlotMealId = (date, slotType) => {
-    return slotMealIds[`${date}_${slotType}`] ?? '';
+    const v = slotMealIds[`${date}_${slotType}`];
+    return v !== undefined && v !== null ? String(v) : '';
   };
 
   const buildSlotsPayload = () => {
@@ -165,8 +187,9 @@ export default function AdminNutritionPlans() {
     daysForForm.forEach((date) => {
       SLOT_TYPES.forEach((slotType) => {
         const mealId = getSlotMealId(date, slotType);
+        const d = parseLocalDate(date);
         arr.push({
-          date: new Date(date).toISOString(),
+          date: d ? new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString() : new Date(date).toISOString(),
           slotType,
           time: SLOT_TIMES[slotType],
           mealId: mealId || null,
@@ -179,15 +202,17 @@ export default function AdminNutritionPlans() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.doctorId || !form.userId || !form.startDate || !form.endDate) {
-      setError(lang === 'ar' ? 'اختر الدكتور والمريض وتواريخ البداية والنهاية' : 'Select doctor, patient, and date range');
+    if (!form.doctorId || !form.userId || !form.startDate) {
+      setError(lang === 'ar' ? 'اختر الدكتور والمريض وتاريخ البداية' : 'Select doctor, patient, and start date');
       return;
     }
+    const startD = parseLocalDate(form.startDate);
+    const endD = form.endDate ? parseLocalDate(form.endDate) : (() => { const d = new Date(startD); d.setDate(d.getDate() + 6); return d; })();
     const body = {
       doctorId: form.doctorId,
       userId: form.userId,
-      startDate: new Date(form.startDate).toISOString(),
-      endDate: new Date(form.endDate).toISOString(),
+      startDate: new Date(startD.getFullYear(), startD.getMonth(), startD.getDate(), 12, 0, 0).toISOString(),
+      endDate: new Date(endD.getFullYear(), endD.getMonth(), endD.getDate(), 12, 0, 0).toISOString(),
       dailyCalorieTarget: Number(form.dailyCalorieTarget) || 2000,
       dailyProteinTarget: Number(form.dailyProteinTarget) || 100,
       dailyCarbsTarget: Number(form.dailyCarbsTarget) || 250,
@@ -207,14 +232,14 @@ export default function AdminNutritionPlans() {
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (!res.ok) { setError('Failed to load plan'); return; }
     const p = data.data || data;
-    const start = p.startDate ? new Date(p.startDate).toISOString().slice(0, 10) : '';
-    const end = p.endDate ? new Date(p.endDate).toISOString().slice(0, 10) : '';
+    const start = p.startDate ? (() => { const d = new Date(p.startDate); return toLocalDateString(d); })() : '';
+    const end = p.endDate ? (() => { const d = new Date(p.endDate); return toLocalDateString(d); })() : '';
     const byDay = groupSlotsByDay(p.slots || []);
     const ids = {};
     Object.keys(byDay).forEach((date) => {
       SLOT_TYPES.forEach((st) => {
         const s = byDay[date][st];
-        if (s?.mealId) ids[`${date}_${st}`] = s.mealId;
+        if (s?.mealId) ids[`${date}_${st}`] = String(s.mealId);
       });
     });
     setSlotMealIds(ids);
@@ -289,6 +314,10 @@ export default function AdminNutritionPlans() {
                   <th className="px-4 py-3 font-medium">{t('startDate')}</th>
                   <th className="px-4 py-3 font-medium">{t('endDate')}</th>
                   <th className="px-4 py-3 font-medium">{t('dailyCalorieTarget')}</th>
+                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'بروتين' : 'Protein'}</th>
+                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'كاربوهيدرات' : 'Carbs'}</th>
+                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'دهون' : 'Fats'}</th>
+                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'عدد الوجبات' : 'Meals'}</th>
                   <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
                 </tr>
               </thead>
@@ -300,6 +329,10 @@ export default function AdminNutritionPlans() {
                     <td className="px-4 py-3">{plan.startDate ? new Date(plan.startDate).toLocaleDateString() : '—'}</td>
                     <td className="px-4 py-3">{plan.endDate ? new Date(plan.endDate).toLocaleDateString() : '—'}</td>
                     <td className="px-4 py-3">{plan.dailyCalorieTarget ?? '—'}</td>
+                    <td className="px-4 py-3">{plan.dailyProteinTarget ?? '—'}</td>
+                    <td className="px-4 py-3">{plan.dailyCarbsTarget ?? '—'}</td>
+                    <td className="px-4 py-3">{plan.dailyFatsTarget ?? '—'}</td>
+                    <td className="px-4 py-3">{plan.slots?.length ?? 0}</td>
                     <td className="px-4 py-3 text-end">
                       <div className="flex gap-1 justify-end">
                         <button type="button" onClick={() => openEdit(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
@@ -352,8 +385,8 @@ export default function AdminNutritionPlans() {
                   <input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('endDate')}</label>
-                  <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('endDate')} {lang === 'ar' ? '(اختياري)' : '(optional)'}</label>
+                  <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -388,7 +421,7 @@ export default function AdminNutritionPlans() {
                       return (
                         <div key={date} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-700/30">
                           <div className="font-medium text-slate-700 dark:text-slate-200 mb-2">
-                            {new Date(date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                            {(parseLocalDate(date) || new Date()).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                           </div>
                           {SLOT_TYPES.map((st) => (
                             <div key={st} className="flex items-center gap-2 py-1">
@@ -399,7 +432,7 @@ export default function AdminNutritionPlans() {
                                 className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-2 py-1.5 text-sm"
                               >
                                 <option value="">— {t('selectMeal')} —</option>
-                                {meals.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.calories ?? 0} {t('calories')})</option>)}
+                                {meals.map((m) => <option key={m.id} value={String(m.id)}>{m.name} ({m.calories ?? 0} {t('calories')})</option>)}
                               </select>
                             </div>
                           ))}
@@ -438,8 +471,8 @@ export default function AdminNutritionPlans() {
                   <input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('endDate')}</label>
-                  <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('endDate')} {lang === 'ar' ? '(اختياري)' : '(optional)'}</label>
+                  <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -474,7 +507,7 @@ export default function AdminNutritionPlans() {
                       return (
                         <div key={date} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-slate-50/50 dark:bg-slate-700/30">
                           <div className="font-medium text-slate-700 dark:text-slate-200 mb-2">
-                            {new Date(date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                            {(parseLocalDate(date) || new Date()).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                           </div>
                           {SLOT_TYPES.map((st) => (
                             <div key={st} className="flex items-center gap-2 py-1">
@@ -485,7 +518,7 @@ export default function AdminNutritionPlans() {
                                 className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-2 py-1.5 text-sm"
                               >
                                 <option value="">— {t('selectMeal')} —</option>
-                                {meals.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.calories ?? 0} {t('calories')})</option>)}
+                                {meals.map((m) => <option key={m.id} value={String(m.id)}>{m.name} ({m.calories ?? 0} {t('calories')})</option>)}
                               </select>
                             </div>
                           ))}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
 import { get } from '../../api';
@@ -64,15 +64,33 @@ export default function AdminDashboard() {
   const mealsCount = stats?.mealsCount ?? 0;
   const exercisesCount = stats?.exercisesCount ?? 0;
   const channelsCount = stats?.channelsCount ?? 0;
-  const total = usersCount + doctorsCount + adminsCount + mealsCount + exercisesCount + channelsCount || 1;
+  const postsCount = stats?.postsCount ?? 0;
+  const nutritionPlansCount = stats?.nutritionPlansCount ?? 0;
+  const workoutPlansCount = stats?.workoutPlansCount ?? 0;
+  const doctorNotesCount = stats?.doctorNotesCount ?? 0;
+  const total =
+    usersCount +
+    doctorsCount +
+    adminsCount +
+    mealsCount +
+    exercisesCount +
+    channelsCount +
+    postsCount +
+    nutritionPlansCount +
+    workoutPlansCount +
+    doctorNotesCount || 1;
 
   const kpiCards = [
-    { labelKey: 'users', value: usersCount, icon: '👥', color: 'bg-blue-500', circleBg: 'bg-blue-100 dark:bg-blue-900/40' },
-    { labelKey: 'doctors', value: doctorsCount, icon: '🩺', color: 'bg-emerald-500', circleBg: 'bg-emerald-100 dark:bg-emerald-900/40' },
-    { labelKey: 'admins', value: adminsCount, icon: '⚙️', color: 'bg-amber-500', circleBg: 'bg-amber-100 dark:bg-amber-900/40' },
-    { labelKey: 'meals', value: mealsCount, icon: '🍽️', color: 'bg-violet-500', circleBg: 'bg-violet-100 dark:bg-violet-900/40' },
-    { labelKey: 'exercises', value: exercisesCount, icon: '💪', color: 'bg-rose-500', circleBg: 'bg-rose-100 dark:bg-rose-900/40' },
-    { labelKey: 'channels', value: channelsCount, icon: '💬', color: 'bg-sky-500', circleBg: 'bg-sky-100 dark:bg-sky-900/40' },
+    { labelKey: 'users', value: usersCount, icon: '👥', color: 'bg-blue-500', circleBg: 'bg-blue-100 dark:bg-blue-900/40', link: '/admin/users' },
+    { labelKey: 'doctors', value: doctorsCount, icon: '🩺', color: 'bg-emerald-500', circleBg: 'bg-emerald-100 dark:bg-emerald-900/40', link: '/admin/doctors' },
+    { labelKey: 'admins', value: adminsCount, icon: '⚙️', color: 'bg-amber-500', circleBg: 'bg-amber-100 dark:bg-amber-900/40', link: '/admin/users' },
+    { labelKey: 'meals', value: mealsCount, icon: '🍽️', color: 'bg-violet-500', circleBg: 'bg-violet-100 dark:bg-violet-900/40', link: '/admin/meals' },
+    { labelKey: 'exercises', value: exercisesCount, icon: '💪', color: 'bg-rose-500', circleBg: 'bg-rose-100 dark:bg-rose-900/40', link: '/admin/exercises' },
+    { labelKey: 'channels', value: channelsCount, icon: '💬', color: 'bg-sky-500', circleBg: 'bg-sky-100 dark:bg-sky-900/40', link: '/admin/channels' },
+    { labelKey: 'communityPosts', value: postsCount, icon: '📝', color: 'bg-teal-500', circleBg: 'bg-teal-100 dark:bg-teal-900/40', link: '/admin/community-posts' },
+    { labelKey: 'nutritionPlans', value: nutritionPlansCount, icon: '🥗', color: 'bg-lime-500', circleBg: 'bg-lime-100 dark:bg-lime-900/40', link: '/admin/nutrition-plans' },
+    { labelKey: 'workoutPlans', value: workoutPlansCount, icon: '📅', color: 'bg-orange-500', circleBg: 'bg-orange-100 dark:bg-orange-900/40', link: '/admin/workout-plans' },
+    { labelKey: 'doctorNotes', value: doctorNotesCount, icon: '📋', color: 'bg-indigo-500', circleBg: 'bg-indigo-100 dark:bg-indigo-900/40', link: '/admin/doctor-notes' },
   ];
 
   const chartData = [
@@ -82,6 +100,10 @@ export default function AdminDashboard() {
     { name: t('meals'), value: mealsCount, fill: '#8b5cf6' },
     { name: t('exercises'), value: exercisesCount, fill: '#f43f5e' },
     { name: t('channels'), value: channelsCount, fill: '#0ea5e9' },
+    { name: t('communityPosts'), value: postsCount, fill: '#14b8a6' },
+    { name: t('nutritionPlans'), value: nutritionPlansCount, fill: '#84cc16' },
+    { name: t('workoutPlans'), value: workoutPlansCount, fill: '#f97316' },
+    { name: t('doctorNotes'), value: doctorNotesCount, fill: '#6366f1' },
   ].filter((d) => d.value > 0);
 
   const maxBar = Math.max(...chartData.map((d) => d.value), 1);
@@ -96,10 +118,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* بطاقات الإحصائيات — أسلوب Minimal */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {kpiCards.map((card) => (
+          <Link key={card.labelKey} to={card.link} className="block">
           <div
-            key={card.labelKey}
             className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 p-5 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between">
@@ -130,6 +152,7 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+          </Link>
         ))}
       </div>
 

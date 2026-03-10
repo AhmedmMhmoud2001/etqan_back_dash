@@ -16,6 +16,7 @@ router.get('/dashboard', asyncHandler(adminController.getDashboard));
 
 // Users CRUD
 router.get('/users', asyncHandler(adminController.listUsers));
+router.get('/users/:id/workout-sessions', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.getUserWorkoutSessions));
 router.get('/users/:id', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.getUserById));
 router.post('/users', adminValidator.createUserRules(), adminValidator.validate, asyncHandler(adminController.createUser));
 router.patch('/users/:id/profile', profileValidator.updateProfileRules(), profileValidator.validate, asyncHandler(adminController.updateUserProfile));
@@ -42,5 +43,15 @@ router.post('/notifications', adminValidator.createNotificationRules(), adminVal
 
 // خطط التغذية — عرض كل الخطط للأدمن
 router.get('/nutrition-plans', asyncHandler(adminController.listNutritionPlans));
+
+// خطط التمارين الأسبوعية — عرض كل الخطط للأدمن
+router.get('/workout-plans', asyncHandler(adminController.listWorkoutPlans));
+
+// ملاحظات الأطباء — كل الملاحظات مع فلتر بالدكتور أو المستخدم
+router.get('/doctor-notes', asyncHandler(adminController.listDoctorNotes));
+
+// المجتمع — بوستات المجتمع: عرض كل البوستات والتحكم فيها
+router.get('/community/posts', asyncHandler(adminController.listCommunityPosts));
+router.delete('/community/posts/:id', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.deleteCommunityPost));
 
 module.exports = router;

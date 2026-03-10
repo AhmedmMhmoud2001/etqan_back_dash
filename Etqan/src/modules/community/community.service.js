@@ -4,6 +4,7 @@ const commentRepository = require('./comment.repository');
 const likeRepository = require('./like.repository');
 const shareRepository = require('./share.repository');
 const followRepository = require('./follow.repository');
+const notificationService = require('../notifications/notification.service');
 
 const formatPost = (post, currentUserId = null) => {
   if (!post) return null;
@@ -57,6 +58,12 @@ const createPost = async (userId, data) => {
     imageUrl: data.imageUrl || null,
     badge: data.badge || null,
   });
+  notificationService.broadcast({
+    title: 'منشور جديد في المجتمع',
+    body: 'تم إضافة منشور جديد في المجتمع. تصفح التحديثات.',
+    type: 'POST_CREATED',
+    link: '/community',
+  }).catch(() => {});
   return formatPost(post, userId);
 };
 
@@ -85,6 +92,12 @@ const updatePost = async (postId, userId, data) => {
   if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl || null;
   if (data.badge !== undefined) payload.badge = data.badge || null;
   const updated = await postRepository.update(postId, payload);
+  notificationService.broadcast({
+    title: 'تم تحديث منشور في المجتمع',
+    body: 'تم تحديث منشور في المجتمع. تصفح التحديثات.',
+    type: 'POST_UPDATED',
+    link: '/community',
+  }).catch(() => {});
   return formatPost(updated, userId);
 };
 

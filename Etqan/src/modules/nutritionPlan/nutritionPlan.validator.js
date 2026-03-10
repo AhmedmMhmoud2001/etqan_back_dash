@@ -14,7 +14,7 @@ const slotRules = () => [
 const createPlanRules = () => [
   body('userId').trim().notEmpty().withMessage('userId (patient) is required'),
   body('startDate').isISO8601().withMessage('startDate is required'),
-  body('endDate').isISO8601().withMessage('endDate is required'),
+  body('endDate').optional().isISO8601(),
   body('dailyCalorieTarget').isInt({ min: 0 }).withMessage('dailyCalorieTarget is required'),
   body('dailyProteinTarget').isInt({ min: 0 }).withMessage('dailyProteinTarget is required'),
   body('dailyCarbsTarget').isInt({ min: 0 }).withMessage('dailyCarbsTarget is required'),

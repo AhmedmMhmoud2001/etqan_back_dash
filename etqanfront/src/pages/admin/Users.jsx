@@ -35,6 +35,7 @@ export default function AdminUsers() {
   const [modal, setModal] = useState(null); // 'create' | 'edit' | 'assign' | 'view' | null
   const [selected, setSelected] = useState(null);
   const [userDetails, setUserDetails] = useState(null);
+  const [workoutSessions, setWorkoutSessions] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [doctors, setDoctors] = useState([]);
@@ -148,15 +149,20 @@ export default function AdminUsers() {
   const openViewDetails = async (user) => {
     setSelected(user);
     setUserDetails(null);
+    setWorkoutSessions([]);
     setModal('view');
     setLoadingDetails(true);
-    const { res, data } = await get(`/admin/users/${user.id}`);
+    const [userRes, sessionsRes] = await Promise.all([
+      get(`/admin/users/${user.id}`),
+      get(`/admin/users/${user.id}/workout-sessions?limit=30`),
+    ]);
     setLoadingDetails(false);
-    if (res.status === 401) {
+    if (userRes.status === 401) {
       navigate('/login', { replace: true });
       return;
     }
-    if (res.ok) setUserDetails(data.data || data);
+    if (userRes.ok) setUserDetails(userRes.data?.data || userRes.data);
+    if (sessionsRes.ok) setWorkoutSessions(sessionsRes.data?.data?.sessions || sessionsRes.data?.sessions || []);
   };
 
   const handleCreate = async (e) => {
@@ -339,6 +345,7 @@ export default function AdminUsers() {
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
                 <tr>
+                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Photo'}</th>
                   <th className="px-4 py-3 font-medium">{t('name')}</th>
                   <th className="px-4 py-3 font-medium">{t('email')}</th>
                   <th className="px-4 py-3 font-medium">{t('role')}</th>
@@ -350,6 +357,13 @@ export default function AdminUsers() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
                 {items.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                    <td className="px-4 py-3">
+                      {user.profile?.imageUrl || user.imageUrl ? (
+                        <img src={user.profile?.imageUrl || user.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-600" />
+                      ) : (
+                        <span className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm font-medium shrink-0">{(user.name || '?').charAt(0).toUpperCase()}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{user.name}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.email}</td>
                     <td className="px-4 py-3">{user.role}</td>
@@ -560,6 +574,34 @@ export default function AdminUsers() {
                           {userDetails.stats.latestWaist != null && ` • ${lang === 'ar' ? 'خصر' : 'Waist'}: ${userDetails.stats.latestWaist} cm`}
                         </p>
                       )}
+                    </div>
+                  </section>
+                )}
+
+                {/* جلسات التمرين — عدد العدات التي قام بها من كل تمرين */}
+                {workoutSessions.length > 0 && (
+                  <section>
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">{lang === 'ar' ? 'جلسات التمرين — العدات المنفذة' : 'Workout sessions — reps performed'}</h3>
+                    <div className="space-y-4 max-h-80 overflow-y-auto">
+                      {workoutSessions.map((sess) => (
+                        <div key={sess.id} className="rounded-lg border border-slate-200 dark:border-slate-600 p-3 bg-slate-50/50 dark:bg-slate-700/30 text-sm">
+                          <div className="font-medium text-slate-800 dark:text-slate-100 mb-2">
+                            {(sess.exercises?.[0]?.exercise ? (lang === 'ar' ? sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.name : sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr) : (lang === 'ar' ? 'جلسة تمرين' : 'Workout'))} — {sess.startedAt ? new Date(sess.startedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : ''} {sess.status === 'COMPLETED' ? (lang === 'ar' ? '(مكتملة)' : '(completed)') : ''}
+                          </div>
+                          <ul className="space-y-2">
+                            {(sess.exercises || []).map((ex) => (
+                              <li key={ex.id} className="pl-2 border-l-2 border-primary-400/50">
+                                <span className="font-medium text-slate-700 dark:text-slate-200">{lang === 'ar' ? ex.exercise?.nameAr || ex.exercise?.name : ex.exercise?.name || ex.exercise?.nameAr}</span>
+                                <span className="text-slate-500 dark:text-slate-400 ml-1">({ex.sets} {lang === 'ar' ? 'مجموعات' : 'sets'} × {ex.repMin}-{ex.repMax} {lang === 'ar' ? 'تكرار' : 'reps'})</span>
+                                <div className="mt-1 text-slate-600 dark:text-slate-300">
+                                  {lang === 'ar' ? 'العدات المنفذة' : 'Reps done'}: {(ex.setsLog || []).map((set) => set.actualReps != null ? set.actualReps : '—').join(', ')}
+                                  {(ex.setsLog || []).length === 0 && (lang === 'ar' ? '—' : '—')}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
                     </div>
                   </section>
                 )}

@@ -1321,7 +1321,10 @@ const swaggerDocument = {
                       type: 'object',
                       properties: {
                         date: { type: 'string', format: 'date' },
-                        workoutTemplateId: { type: 'string' },
+                        exerciseId: { type: 'string' },
+                        sets: { type: 'integer' },
+                        repMin: { type: 'integer' },
+                        repMax: { type: 'integer' },
                         order: { type: 'integer' },
                       },
                     },
@@ -1395,10 +1398,9 @@ const swaggerDocument = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['workoutTemplateId'],
+                required: ['userWeeklyPlanDayId'],
                 properties: {
-                  workoutTemplateId: { type: 'string' },
-                  userWeeklyPlanDayId: { type: 'string', description: 'Optional: link to plan day' },
+                  userWeeklyPlanDayId: { type: 'string', description: 'ID of the plan day to start (must have an exercise)' },
                 },
               },
             },

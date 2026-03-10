@@ -163,6 +163,7 @@ export default function AdminExercises() {
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
                 <tr>
+                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
                   <th className="px-4 py-3 font-medium">{t('name')}</th>
                   <th className="px-4 py-3 font-medium">{t('description')}</th>
                   <th className="px-4 py-3 font-medium">{t('equipmentNeeded')}</th>
@@ -172,6 +173,13 @@ export default function AdminExercises() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
                 {items.map((ex) => (
                   <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                    <td className="px-4 py-3">
+                      {ex.imageUrl ? (
+                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                      ) : (
+                        <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>💪</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{ex.name} {ex.nameAr ? `(${ex.nameAr})` : ''}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">{ex.description || '—'}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-sm">

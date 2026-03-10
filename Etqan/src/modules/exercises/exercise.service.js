@@ -1,5 +1,6 @@
 const { prisma } = require('../../prisma/client');
 const exerciseRepository = require('./exercise.repository');
+const notificationService = require('../notifications/notification.service');
 
 const getDoctorIdForUser = async (user) => {
   if (user.role !== 'DOCTOR') return null;
@@ -51,7 +52,14 @@ const update = async (id, data, user) => {
     err.statusCode = 403;
     throw err;
   }
-  return exerciseRepository.update(id, data);
+  const updated = await exerciseRepository.update(id, data);
+  notificationService.broadcast({
+    title: 'تم تحديث تمرين',
+    body: 'تم تحديث تمرين في قائمة التمارين.',
+    type: 'EXERCISE_UPDATED',
+    link: '/exercises',
+  }).catch(() => {});
+  return updated;
 };
 
 const remove = async (id, user) => {

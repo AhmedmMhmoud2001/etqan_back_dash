@@ -1,38 +1,31 @@
 const { prisma } = require('../../prisma/client');
 const workoutSessionRepository = require('./workoutSession.repository');
 
-/** بدء جلسة تمرين: إما من يوم الخطة الأسبوعية أو من قالب مباشرة */
+/** بدء جلسة تمرين من يوم الخطة (تمرين واحد) */
 const startSession = async (userId, data) => {
-  const { workoutTemplateId, userWeeklyPlanDayId } = data;
-  if (!workoutTemplateId) {
-    const err = new Error('workoutTemplateId is required');
+  const { userWeeklyPlanDayId } = data;
+  if (!userWeeklyPlanDayId) {
+    const err = new Error('userWeeklyPlanDayId is required');
     err.statusCode = 400;
     throw err;
   }
-  const template = await prisma.workoutTemplate.findUnique({ where: { id: workoutTemplateId } });
-  if (!template) {
-    const err = new Error('Workout template not found');
+  const day = await prisma.userWeeklyPlanDay.findUnique({
+    where: { id: userWeeklyPlanDayId },
+    include: { userWeeklyPlan: true, exercise: true },
+  });
+  if (!day || day.userWeeklyPlan.userId !== userId) {
+    const err = new Error('Plan day not found or not yours');
     err.statusCode = 404;
     throw err;
   }
-  if (userWeeklyPlanDayId) {
-    const day = await prisma.userWeeklyPlanDay.findUnique({
-      where: { id: userWeeklyPlanDayId },
-      include: { userWeeklyPlan: true },
-    });
-    if (!day || day.userWeeklyPlan.userId !== userId) {
-      const err = new Error('Plan day not found or not yours');
-      err.statusCode = 404;
-      throw err;
-    }
+  if (!day.exerciseId || !day.exercise) {
+    const err = new Error('Plan day has no exercise');
+    err.statusCode = 400;
+    throw err;
   }
-  const session = await workoutSessionRepository.createFromTemplate(
-    userId,
-    workoutTemplateId,
-    userWeeklyPlanDayId || null
-  );
+  const session = await workoutSessionRepository.createFromPlanDay(userId, userWeeklyPlanDayId);
   if (!session) {
-    const err = new Error('Failed to create session');
+    const err = new Error('Failed to create session from plan day');
     err.statusCode = 500;
     throw err;
   }

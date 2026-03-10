@@ -10,9 +10,9 @@ import AdminNutritionPlans from './pages/admin/NutritionPlans';
 import AdminWorkoutPlans from './pages/admin/WorkoutPlans';
 import AdminChannels from './pages/admin/Channels';
 import AdminDoctorNotes from './pages/admin/DoctorNotes';
+import AdminCommunityPosts from './pages/admin/CommunityPosts';
 import AdminNotifications from './pages/admin/Notifications';
 import AdminProfile from './pages/admin/Profile';
-import AdminSettings from './pages/admin/Settings';
 
 function ProtectedAdmin({ children }) {
   const token = localStorage.getItem('token');
@@ -45,9 +45,9 @@ function App() {
         <Route path="workout-plans" element={<AdminWorkoutPlans />} />
         <Route path="channels" element={<AdminChannels />} />
         <Route path="doctor-notes" element={<AdminDoctorNotes />} />
+        <Route path="community-posts" element={<AdminCommunityPosts />} />
         <Route path="notifications" element={<AdminNotifications />} />
         <Route path="profile" element={<AdminProfile />} />
-        <Route path="settings" element={<AdminSettings />} />
       </Route>
       <Route path="/" element={<Navigate to="/admin" replace />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />

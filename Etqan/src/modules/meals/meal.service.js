@@ -1,5 +1,6 @@
 const mealRepository = require('./meal.repository');
 const mealLogRepository = require('./mealLog.repository');
+const notificationService = require('../notifications/notification.service');
 
 const MEAL_TYPES = ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'];
 
@@ -30,10 +31,17 @@ const getMealById = async (id) => {
 };
 
 const createMeal = async (data, userId) => {
-  return mealRepository.create({
+  const meal = await mealRepository.create({
     ...data,
     addedByUserId: userId,
   });
+  notificationService.broadcast({
+    title: 'وجبة جديدة',
+    body: 'تم إضافة وجبة جديدة. تصفح قائمة الوجبات.',
+    type: 'MEAL_CREATED',
+    link: '/meals',
+  }).catch(() => {});
+  return meal;
 };
 
 const updateMeal = async (id, data, user) => {
@@ -48,7 +56,14 @@ const updateMeal = async (id, data, user) => {
     err.statusCode = 403;
     throw err;
   }
-  return mealRepository.update(id, data);
+  const updated = await mealRepository.update(id, data);
+  notificationService.broadcast({
+    title: 'تم تحديث وجبة',
+    body: 'تم تحديث وجبة في قائمة الوجبات.',
+    type: 'MEAL_UPDATED',
+    link: '/meals',
+  }).catch(() => {});
+  return updated;
 };
 
 const deleteMeal = async (id, user) => {
