@@ -96,20 +96,20 @@ export default function AdminChannels() {
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm overflow-hidden">
         {loading ? <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t('name')}</th>
-                  <th className="px-4 py-3 font-medium">{t('channelDescription')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('name')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('channelDescription')}</th>
                   <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {items.map((ch) => (
                   <tr key={ch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{ch.name}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-md truncate">{ch.description || '—'}</td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{ch.name}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-md truncate">{ch.description || '—'}</td>
+                    <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end items-center">
                         <button type="button" onClick={() => openEdit(ch)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
                         <button type="button" onClick={() => handleDelete(ch)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>

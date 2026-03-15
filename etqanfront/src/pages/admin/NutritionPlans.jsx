@@ -306,34 +306,34 @@ export default function AdminNutritionPlans() {
           <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t('doctor')}</th>
-                  <th className="px-4 py-3 font-medium">{t('patient')}</th>
-                  <th className="px-4 py-3 font-medium">{t('startDate')}</th>
-                  <th className="px-4 py-3 font-medium">{t('endDate')}</th>
-                  <th className="px-4 py-3 font-medium">{t('dailyCalorieTarget')}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'بروتين' : 'Protein'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'كاربوهيدرات' : 'Carbs'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'دهون' : 'Fats'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'عدد الوجبات' : 'Meals'}</th>
-                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('doctor')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('patient')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('startDate')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('endDate')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('dailyCalorieTarget')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'بروتين' : 'Protein'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'كاربوهيدرات' : 'Carbs'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'دهون' : 'Fats'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'عدد الوجبات' : 'Meals'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {plans.map((plan) => (
                   <tr key={plan.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{plan.doctor?.user?.name ?? plan.doctorId ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.user?.name ?? plan.userId ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.startDate ? new Date(plan.startDate).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-3">{plan.endDate ? new Date(plan.endDate).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-3">{plan.dailyCalorieTarget ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.dailyProteinTarget ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.dailyCarbsTarget ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.dailyFatsTarget ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.slots?.length ?? 0}</td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{plan.doctor?.user?.name ?? plan.doctorId ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.user?.name ?? plan.userId ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.startDate ? new Date(plan.startDate).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.endDate ? new Date(plan.endDate).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.dailyCalorieTarget ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.dailyProteinTarget ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.dailyCarbsTarget ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.dailyFatsTarget ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.slots?.length ?? 0}</td>
+                    <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end">
                         <button type="button" onClick={() => openEdit(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
                         <button type="button" onClick={() => handleDelete(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>

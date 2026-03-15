@@ -300,41 +300,41 @@ export default function AdminCommunityPosts() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
+            <table className="w-full text-start text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'الناشر' : 'Author'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'المحتوى' : 'Content'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'إعجابات' : 'Likes'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'تعليقات' : 'Comments'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'التاريخ' : 'Date'}</th>
-                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
+                  <th className="px-4 py-3 font-medium text-start w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'الناشر' : 'Author'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'المحتوى' : 'Content'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'إعجابات' : 'Likes'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'تعليقات' : 'Comments'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {posts.map((post) => (
                   <tr key={post.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       {post.imageUrl ? (
                         <img src={post.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>📝</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">
                       {post.user?.name ?? post.userId ?? '—'}
                       {post.user?.email && <span className="text-xs text-slate-500 block">{post.user.email}</span>}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md">
+                    <td className="px-4 py-3 text-start text-slate-700 dark:text-slate-300 max-w-md">
                       <span title={post.content}>{contentPreview(post.content)}</span>
                     </td>
-                    <td className="px-4 py-3">{post._count?.likes ?? 0}</td>
-                    <td className="px-4 py-3">{post._count?.comments ?? 0}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-start">{post._count?.likes ?? 0}</td>
+                    <td className="px-4 py-3 text-start">{post._count?.comments ?? 0}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {post.createdAt ? new Date(post.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en') : '—'}
                     </td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start">
                       <div className="flex items-center justify-end gap-0">
                         <button
                           type="button"

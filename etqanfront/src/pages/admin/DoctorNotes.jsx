@@ -155,28 +155,28 @@ export default function AdminDoctorNotes() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300">
+            <table className="w-full text-start text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t('doctor')}</th>
-                  <th className="px-4 py-3 font-medium">{t('patient')}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'الملاحظة' : 'Note'}</th>
-                  <th className="px-4 py-3 font-medium">{lang === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('doctor')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('patient')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'الملاحظة' : 'Note'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{lang === 'ar' ? 'التاريخ' : 'Date'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {notes.map((note) => (
                   <tr key={note.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">
                       {note.doctor?.user?.name ?? note.doctorId ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">
                       {note.patient?.name ?? note.patientId ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md">
+                    <td className="px-4 py-3 text-start text-slate-700 dark:text-slate-300 max-w-md">
                       <span title={note.content}>{contentPreview(note.content)}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {note.createdAt ? new Date(note.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en') : '—'}
                     </td>
                   </tr>

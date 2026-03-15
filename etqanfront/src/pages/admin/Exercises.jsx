@@ -160,29 +160,29 @@ export default function AdminExercises() {
           <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
-                  <th className="px-4 py-3 font-medium">{t('name')}</th>
-                  <th className="px-4 py-3 font-medium">{t('description')}</th>
-                  <th className="px-4 py-3 font-medium">{t('equipmentNeeded')}</th>
+                  <th className="px-4 py-3 font-medium text-start w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('name')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('description')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('equipmentNeeded')}</th>
                   <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {items.map((ex) => (
                   <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       {ex.imageUrl ? (
                         <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>💪</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{ex.name} {ex.nameAr ? `(${ex.nameAr})` : ''}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">{ex.description || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-sm">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{ex.name} {ex.nameAr ? `(${ex.nameAr})` : ''}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-xs truncate">{ex.description || '—'}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 text-sm">
                       {Array.isArray(ex.equipmentNeeded) && ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr).length > 0
                         ? ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr).map((eq, i) => (
                             <span key={i} className="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-600 text-xs">
@@ -191,7 +191,7 @@ export default function AdminExercises() {
                           ))
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end items-center">
                         <button type="button" onClick={() => openEdit(ex)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
                         <button type="button" onClick={() => handleDelete(ex)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>

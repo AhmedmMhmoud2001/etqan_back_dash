@@ -216,42 +216,42 @@ export default function AdminMeals() {
           <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
-                  <th className="px-4 py-3 font-medium">{t('name')}</th>
-                  <th className="px-4 py-3 font-medium">{t('mealType')}</th>
-                  <th className="px-4 py-3 font-medium">{t('calories')}</th>
-                  <th className="px-4 py-3 font-medium">{t('proteinG')}</th>
-                  <th className="px-4 py-3 font-medium">{t('ingredients')}</th>
-                  <th className="px-4 py-3 font-medium">{t('prepTimeMinutes')}</th>
-                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
+                  <th className="px-4 py-3 font-medium text-start w-14">{lang === 'ar' ? 'الصورة' : 'Image'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('name')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('mealType')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('calories')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('proteinG')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('ingredients')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('prepTimeMinutes')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {items.map((meal) => (
                   <tr key={meal.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       {meal.imageUrl ? (
                         <img src={meal.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>🍽️</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{meal.name}</td>
-                    <td className="px-4 py-3">{t('mealType' + (meal.mealType || '').charAt(0) + (meal.mealType || '').slice(1).toLowerCase())}</td>
-                    <td className="px-4 py-3">{meal.calories ?? 0}</td>
-                    <td className="px-4 py-3">{meal.proteinG ?? 0}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300 text-sm">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{meal.name}</td>
+                    <td className="px-4 py-3 text-start">{t('mealType' + (meal.mealType || '').charAt(0) + (meal.mealType || '').slice(1).toLowerCase())}</td>
+                    <td className="px-4 py-3 text-start">{meal.calories ?? 0}</td>
+                    <td className="px-4 py-3 text-start">{meal.proteinG ?? 0}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 text-sm">
                       {meal.ingredients?.length ? (
                         <span title={(meal.ingredients || []).map((i) => `${i.name}: ${i.quantity}${i.unit}`).join(', ')}>
                           {(meal.ingredients || []).map((i) => i.name).join(', ').slice(0, 40)}{(meal.ingredients?.length && meal.ingredients.map((i) => i.name).join(', ').length > 40) ? '…' : ''}
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3">{meal.prepTimeMinutes ?? 0} min</td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start">{meal.prepTimeMinutes ?? 0} min</td>
+                    <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end items-center">
                         <button type="button" onClick={() => openEdit(meal)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
                         <button type="button" onClick={() => handleDelete(meal)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>

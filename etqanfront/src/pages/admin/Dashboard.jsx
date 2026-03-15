@@ -13,14 +13,16 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchDashboard = async () => {
       const { res, data } = await get('/admin/dashboard');
+      if (cancelled) return;
       if (res.status === 401) {
         navigate('/login', { replace: true });
         return;
       }
       if (!res.ok) {
-        setError(data.message || t('loadError'));
+        setError(data.message || (lang === 'ar' ? 'فشل التحميل' : 'Load failed'));
         setLoading(false);
         return;
       }
@@ -29,7 +31,8 @@ export default function AdminDashboard() {
       setLoading(false);
     };
     fetchDashboard();
-  }, [navigate, t]);
+    return () => { cancelled = true; };
+  }, [navigate, lang]);
 
   if (loading) {
     return (

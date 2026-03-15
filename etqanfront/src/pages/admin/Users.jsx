@@ -342,35 +342,35 @@ export default function AdminUsers() {
           <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium w-14">{lang === 'ar' ? 'الصورة' : 'Photo'}</th>
-                  <th className="px-4 py-3 font-medium">{t('name')}</th>
-                  <th className="px-4 py-3 font-medium">{t('email')}</th>
-                  <th className="px-4 py-3 font-medium">{t('role')}</th>
-                  <th className="px-4 py-3 font-medium">{t('doctor')}</th>
-                  <th className="px-4 py-3 font-medium">{t('status')}</th>
-                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
+                  <th className="px-4 py-3 font-medium text-start w-14">{lang === 'ar' ? 'الصورة' : 'Photo'}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('name')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('email')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('role')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('doctor')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('status')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {items.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       {user.profile?.imageUrl || user.imageUrl ? (
                         <img src={user.profile?.imageUrl || user.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm font-medium shrink-0">{(user.name || '?').charAt(0).toUpperCase()}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{user.name}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{user.email}</td>
-                    <td className="px-4 py-3">{user.role}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{user.name}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300">{user.email}</td>
+                    <td className="px-4 py-3 text-start">{user.role}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300">
                       {user.doctor?.user?.name || user.doctor?.title || '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-start">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                           user.isActive !== false
@@ -381,7 +381,7 @@ export default function AdminUsers() {
                         {user.isActive !== false ? t('active') : t('inactive')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start">
                       <div className="flex flex-wrap gap-1 justify-end items-center">
                         <button
                           type="button"

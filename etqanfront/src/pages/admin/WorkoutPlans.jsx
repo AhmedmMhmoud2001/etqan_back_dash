@@ -292,24 +292,24 @@ export default function AdminWorkoutPlans() {
         {loadingPlans && <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>}
         {!loadingPlans && (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm">
+            <table className="w-full text-start">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-sm text-start">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t('doctor')}</th>
-                  <th className="px-4 py-3 font-medium">{t('patient')}</th>
-                  <th className="px-4 py-3 font-medium">{t('weekStart')}</th>
-                  <th className="px-4 py-3 font-medium">{t('weekEnd')}</th>
-                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('doctor')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('patient')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('weekStart')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('weekEnd')}</th>
+                  <th className="px-4 py-3 font-medium text-start">{t('actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {plansToShow.map((plan) => (
                   <tr key={plan.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{plan.doctor?.user?.name ?? plan.doctorId ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.user?.name ?? plan.userId ?? '—'}</td>
-                    <td className="px-4 py-3">{plan.weekStart ? new Date(plan.weekStart).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-3">{plan.weekEnd ? new Date(plan.weekEnd).toLocaleDateString() : '—'}</td>
-                    <td className="px-4 py-3 text-end">
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{plan.doctor?.user?.name ?? plan.doctorId ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.user?.name ?? plan.userId ?? '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.weekStart ? new Date(plan.weekStart).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 text-start">{plan.weekEnd ? new Date(plan.weekEnd).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 text-start">
                       <div className="inline-flex items-center gap-1">
                         <button type="button" onClick={() => openView(plan)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={lang === 'ar' ? 'عرض' : 'View'} aria-label={lang === 'ar' ? 'عرض' : 'View'}>
                           <IconView />
