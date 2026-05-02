@@ -33,18 +33,21 @@ const register = async (payload) => {
   }
   const hashedPassword = await hashPassword(payload.password);
   const doctorId = await pickDoctorWithLeastPatients();
+  const autoVerifyEmailOnRegister = Boolean(config.auth?.autoVerifyEmailOnRegister);
   const user = await authRepository.createUser({
     name: payload.name,
     email: payload.email,
     password: hashedPassword,
     role: 'USER',
+    emailVerified: autoVerifyEmailOnRegister ? true : false,
     doctorId: doctorId || undefined,
     referredById: referredById || undefined,
   });
   if (referredById) {
     await referralService.addReferrerDiscount(referredById);
   }
-  return { user, token: null };
+  const token = autoVerifyEmailOnRegister ? generateToken(user.id, user.role) : null;
+  return { user, token };
 };
 
 const login = async (email, password) => {

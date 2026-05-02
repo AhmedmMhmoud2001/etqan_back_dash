@@ -4,6 +4,7 @@ const fs = require('fs');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./config/swagger');
+const swaggerMobileDocument = require('./config/swagger.mobile');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const doctorRoutes = require('./routes/doctor.routes');
@@ -40,10 +41,36 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 // Swagger API docs
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-  customSiteTitle: 'Etqan API Docs',
+// NOTE: swagger-ui-express shares one global swagger-ui-init.js when using swaggerUi.serve twice.
+// Use serveFiles() per mount so each URL gets the correct spec (see swagger-ui-express source: swaggerInit).
+// - /api-docs: mobile spec (swagger.mobile.js)
+// - /api-docs-admin: full spec including admin
+const swaggerNoCache = (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+};
+const swaggerUiMobileOpts = {
+  customSiteTitle: 'Etqan API Docs (Mobile)',
   customCss: '.swagger-ui .topbar { display: none }',
-}));
+};
+const swaggerUiAdminOpts = {
+  customSiteTitle: 'Etqan API Docs (Admin)',
+  customCss: '.swagger-ui .topbar { display: none }',
+};
+app.use(
+  '/api-docs',
+  swaggerNoCache,
+  ...swaggerUi.serveFiles(swaggerMobileDocument, swaggerUiMobileOpts),
+  swaggerUi.setup(swaggerMobileDocument, swaggerUiMobileOpts)
+);
+app.use(
+  '/api-docs-admin',
+  swaggerNoCache,
+  ...swaggerUi.serveFiles(swaggerDocument, swaggerUiAdminOpts),
+  swaggerUi.setup(swaggerDocument, swaggerUiAdminOpts)
+);
 
 // API routes
 app.use('/api/auth', authRoutes);

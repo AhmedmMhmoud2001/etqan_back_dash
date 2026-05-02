@@ -3,6 +3,11 @@ require('dotenv').config();
 module.exports = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 3000,
+  auth: {
+    // Dev convenience: skip OTP and mark emailVerified=true on register.
+    // Keep this false in production.
+    autoVerifyEmailOnRegister: String(process.env.AUTO_VERIFY_EMAIL_ON_REGISTER || '').toLowerCase() === 'true',
+  },
   jwt: {
     secret: process.env.JWT_SECRET || 'default-secret-change-me',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',

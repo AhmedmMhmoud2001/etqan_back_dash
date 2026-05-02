@@ -6,9 +6,18 @@ const otpService = require('../otp/otp.service');
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, referralCode } = req.body;
   const result = await authService.register({ name, email, password, referralCode });
-  await otpService.createAndSend(result.user.id, result.user.email, 'EMAIL_VERIFICATION');
   const { password: _, ...userWithoutPassword } = result.user;
-  success(res, { user: userWithoutPassword, message: 'Registration successful. Please verify your email with OTP.' }, 'Registered', 201);
+  // In dev we may auto-verify and return JWT immediately.
+  if (result.token) {
+    return success(res, { user: userWithoutPassword, token: result.token }, 'Registered', 201);
+  }
+  await otpService.createAndSend(result.user.id, result.user.email, 'EMAIL_VERIFICATION');
+  return success(
+    res,
+    { user: userWithoutPassword, message: 'Registration successful. Please verify your email with OTP.' },
+    'Registered',
+    201
+  );
 });
 
 const login = asyncHandler(async (req, res) => {

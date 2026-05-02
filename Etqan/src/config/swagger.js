@@ -15,6 +15,8 @@ const swaggerDocument = {
   },
   servers: [
     { url: `http://localhost:${config.port}/api`, description: 'Local' },
+    // Optional: set SWAGGER_PROD_URL=https://etqan.nodeteam.site/api
+    ...(process.env.SWAGGER_PROD_URL ? [{ url: process.env.SWAGGER_PROD_URL, description: 'Production' }] : []),
   ],
   tags: [
     { name: 'Auth', description: 'Register, Login' },
@@ -38,6 +40,8 @@ const swaggerDocument = {
     { name: 'Grocery', description: 'قائمة البقالة (Grocery List)' },
     { name: 'Doctor Notes', description: 'ملاحظة/مراجعة من الدكتور للمريض (Note from your Doctor)' },
     { name: 'Dashboard', description: 'الصفحة الرئيسية: مقاييس، التزام، هدف، ملخص اليوم، ملاحظة الدكتور' },
+    { name: 'Notifications', description: 'User notifications (list / unread / mark read)' },
+    { name: 'Upload', description: 'Upload image (multipart/form-data)' },
   ],
   components: {
     securitySchemes: {
@@ -85,9 +89,28 @@ const swaggerDocument = {
           goal: { type: 'string', enum: ['LOSE_WEIGHT', 'MAINTAIN', 'BUILD_MUSCLE'] },
           targetWeight: { type: 'number' },
           measurementSystem: { type: 'string', enum: ['METRIC', 'IMPERIAL'] },
-          dietaryPreferences: { type: 'array', items: { type: 'string' } },
-          allergies: { type: 'array', items: { type: 'string' } },
-          healthConditions: { type: 'array', items: { type: 'string' } },
+          dietaryPreferences: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['BALANCED', 'LOW_CARB', 'HIGH_PROTEIN', 'KETO', 'VEGAN', 'VEGETARIAN', 'PALEO', 'MEDITERRANEAN'],
+            },
+          },
+          allergies: {
+            type: 'array',
+            items: {
+              type: 'string',
+              // Also allowed: "CUSTOM: <name>"
+              enum: ['DAIRY', 'EGGS', 'PEANUTS', 'SOY', 'WHEAT', 'TREE_NUTS', 'FISH', 'SHELLFISH'],
+            },
+          },
+          healthConditions: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['DIABETES', 'HIGH_BLOOD_PRESSURE', 'HIGH_CHOLESTEROL', 'PCOS', 'THYROID_ISSUES', 'HEART_DISEASE'],
+            },
+          },
         },
       },
     },
@@ -106,10 +129,17 @@ const swaggerDocument = {
                 required: ['name', 'email', 'password', 'confirmPassword'],
                 properties: {
                   name: { type: 'string', example: 'John Doe' },
-                  email: { type: 'string', format: 'email', example: 'user@example.com' },
-                  password: { type: 'string', format: 'password', minLength: 8 },
-                  confirmPassword: { type: 'string', format: 'password' },
+                  email: { type: 'string', format: 'email', example: 'user33@example.com' },
+                  password: { type: 'string', format: 'password', minLength: 8, example: 'stringst' },
+                  confirmPassword: { type: 'string', format: 'password', example: 'stringst' },
                   referralCode: { type: 'string', description: 'Optional referral code (e.g. ETQAN2026)' },
+                },
+                example: {
+                  name: 'John Doe',
+                  email: 'user33@example.com',
+                  password: 'stringst',
+                  confirmPassword: 'stringst',
+                  referralCode: 'ETQAN2026'
                 },
               },
             },
@@ -270,12 +300,47 @@ const swaggerDocument = {
                   activityLevel: { type: 'string', enum: ['SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE', 'VERY_ACTIVE'] },
                   goal: { type: 'string', enum: ['LOSE_WEIGHT', 'MAINTAIN', 'BUILD_MUSCLE'] },
                   targetWeight: { type: 'number' },
-                  dietaryPreferences: { type: 'array', items: { type: 'string' } },
-                  allergies: { type: 'array', items: { type: 'string' } },
-                  healthConditions: { type: 'array', items: { type: 'string' } },
+                  dietaryPreferences: {
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      enum: ['BALANCED', 'LOW_CARB', 'HIGH_PROTEIN', 'KETO', 'VEGAN', 'VEGETARIAN', 'PALEO', 'MEDITERRANEAN'],
+                    },
+                  },
+                  allergies: {
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      // Also allowed: "CUSTOM: <name>"
+                      enum: ['DAIRY', 'EGGS', 'PEANUTS', 'SOY', 'WHEAT', 'TREE_NUTS', 'FISH', 'SHELLFISH'],
+                    },
+                  },
+                  healthConditions: {
+                    type: 'array',
+                    items: {
+                      type: 'string',
+                      enum: ['DIABETES', 'HIGH_BLOOD_PRESSURE', 'HIGH_CHOLESTEROL', 'PCOS', 'THYROID_ISSUES', 'HEART_DISEASE'],
+                    },
+                  },
                   notificationsEnabled: { type: 'boolean', description: 'Preferences: notifications on/off' },
                   darkMode: { type: 'boolean', description: 'Preferences: dark mode' },
                   language: { type: 'string', description: 'e.g. en, ar' },
+                },
+                example: {
+                  measurementSystem: 'METRIC',
+                  gender: 'MALE',
+                  age: 0,
+                  height: 0,
+                  weight: 0,
+                  activityLevel: 'SEDENTARY',
+                  goal: 'LOSE_WEIGHT',
+                  targetWeight: 0,
+                  dietaryPreferences: ['BALANCED'],
+                  allergies: ['DAIRY'],
+                  healthConditions: ['DIABETES'],
+                  notificationsEnabled: true,
+                  darkMode: true,
+                  language: 'string',
                 },
               },
             },
@@ -2076,6 +2141,73 @@ const swaggerDocument = {
           200: {
             description: 'bodyComposition (current, changes), weeklyAdherence (nutrition, workouts, overallPercent), goalProgress (currentWeightKg, targetWeightKg, remainingKg, estimatedReachDate, weeklyTrendKg), todaySummary (date, calories, workouts), doctorNote (content, createdAt, doctor, source)',
           },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+
+    // ——— Notifications ———
+    '/notifications': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'List my notifications',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { 200: { description: 'items[], total, page, limit' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/notifications/unread-count': {
+      get: {
+        tags: ['Notifications'],
+        summary: 'Get unread notifications count',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: '{ unreadCount }' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/notifications/read-all': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Mark all notifications as read',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Updated' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/notifications/{id}/read': {
+      patch: {
+        tags: ['Notifications'],
+        summary: 'Mark notification as read',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Updated' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+      },
+    },
+
+    // ——— Upload ———
+    '/upload/image': {
+      post: {
+        tags: ['Upload'],
+        summary: 'Upload a single image (multipart/form-data)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['image'],
+                properties: {
+                  image: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Returns { url: /uploads/<file> }' },
+          400: { description: 'Invalid file / too large (max 5MB)' },
           401: { description: 'Unauthorized' },
         },
       },
