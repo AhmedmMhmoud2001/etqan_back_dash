@@ -209,10 +209,13 @@ const createDoctor = async (userData, doctorData = {}) => {
       userId: user.id,
       title: doctorData.title,
       titleAr: doctorData.titleAr,
+      titleIt: doctorData.titleIt,
       specialization: doctorData.specialization,
       specializationAr: doctorData.specializationAr,
+      specializationIt: doctorData.specializationIt,
       bio: doctorData.bio,
       bioAr: doctorData.bioAr,
+      bioIt: doctorData.bioIt,
     },
     include: { user: { select: { id: true, name: true, email: true } } },
   });
@@ -225,10 +228,13 @@ const updateDoctor = async (id, data) => {
   const doctorPayload = {};
   if (data.title !== undefined) doctorPayload.title = data.title;
   if (data.titleAr !== undefined) doctorPayload.titleAr = data.titleAr;
+  if (data.titleIt !== undefined) doctorPayload.titleIt = data.titleIt;
   if (data.specialization !== undefined) doctorPayload.specialization = data.specialization;
   if (data.specializationAr !== undefined) doctorPayload.specializationAr = data.specializationAr;
+  if (data.specializationIt !== undefined) doctorPayload.specializationIt = data.specializationIt;
   if (data.bio !== undefined) doctorPayload.bio = data.bio;
   if (data.bioAr !== undefined) doctorPayload.bioAr = data.bioAr;
+  if (data.bioIt !== undefined) doctorPayload.bioIt = data.bioIt;
   if (data.isActive !== undefined) doctorPayload.isActive = data.isActive;
   if (data.name != null || data.email != null) {
     const userPayload = {};

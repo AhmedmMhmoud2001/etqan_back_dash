@@ -17,6 +17,7 @@ const generateToken = (userId, role) => {
 
 const referralService = require('../referrals/referral.service');
 const referralRepository = require('../referrals/referral.repository');
+const { pickDoctorWithLeastPatients } = require('../../utils/doctorAssignment');
 
 const register = async (payload) => {
   const existing = await authRepository.findUserByEmail(payload.email);
@@ -31,11 +32,13 @@ const register = async (payload) => {
     if (referrer) referredById = referrer.id;
   }
   const hashedPassword = await hashPassword(payload.password);
+  const doctorId = await pickDoctorWithLeastPatients();
   const user = await authRepository.createUser({
     name: payload.name,
     email: payload.email,
     password: hashedPassword,
     role: 'USER',
+    doctorId: doctorId || undefined,
     referredById: referredById || undefined,
   });
   if (referredById) {

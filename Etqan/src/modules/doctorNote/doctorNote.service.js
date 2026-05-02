@@ -10,8 +10,8 @@ const getDoctorIdForUser = async (user) => {
 const create = async (data, user) => {
   const { patientId, content, doctorId: bodyDoctorId } = data;
   const doctorId = await getDoctorIdForUser(user);
-  if (!doctorId && user.role !== 'ADMIN') {
-    const err = new Error('Only doctors or admin can add notes');
+  if (!doctorId) {
+    const err = new Error('Only doctors can add notes');
     err.statusCode = 403;
     throw err;
   }
@@ -22,14 +22,8 @@ const create = async (data, user) => {
     throw err;
   }
   let finalDoctorId = doctorId;
-  if (user.role === 'ADMIN') {
-    finalDoctorId = bodyDoctorId || patient.doctorId;
-    if (!finalDoctorId) {
-      const err = new Error('doctorId required (patient has no assigned doctor)');
-      err.statusCode = 400;
-      throw err;
-    }
-  }
+  // Admin cannot create notes on behalf of doctors.
+  void bodyDoctorId;
   const doctorRecord = await prisma.doctor.findUnique({ where: { id: finalDoctorId } });
   if (!doctorRecord) {
     const err = new Error('Doctor not found');
@@ -64,5 +58,14 @@ module.exports = {
   create,
   getLatestForPatient,
   listForPatient,
+  listForMyPatients: async (user) => {
+    const doctorId = await getDoctorIdForUser(user);
+    if (!doctorId) {
+      const err = new Error('Doctor only');
+      err.statusCode = 403;
+      throw err;
+    }
+    return doctorNoteRepository.findByDoctorPatientsDoctorId(doctorId);
+  },
   getDoctorIdForUser,
 };

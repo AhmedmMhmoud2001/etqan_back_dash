@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE = '/api';
+import { API_BASE } from '../api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,8 +24,9 @@ export default function Login() {
         const msg = data.message || (res.status === 401 ? 'البريد أو كلمة المرور غير صحيحة' : 'فشل تسجيل الدخول');
         throw new Error(msg);
       }
-      if (data.data?.user?.role !== 'ADMIN') {
-        throw new Error('هذا الحساب ليس أدمن. لوحة التحكم متاحة للأدمن فقط.');
+      const role = data.data?.user?.role;
+      if (role !== 'ADMIN' && role !== 'DOCTOR') {
+        throw new Error('هذا الحساب غير مسموح له بالدخول للوحة التحكم.');
       }
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
@@ -42,7 +42,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         <h1 className="text-2xl font-bold text-center text-slate-800 mb-2">Etqan</h1>
-        <p className="text-center text-slate-500 mb-6">لوحة تحكم الأدمن</p>
+        <p className="text-center text-slate-500 mb-6">لوحة التحكم</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني</label>

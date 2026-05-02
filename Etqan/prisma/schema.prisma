@@ -103,6 +103,8 @@ model User {
   workoutWeeklyPlans UserWeeklyPlan[]
   // قياسات الجسم (وزن، دهون، عضلات، ماء، خصر) — شاشة Progress
   measurements Measurement[]
+  measurementBaseline MeasurementBaseline?
+  measurementGoal     MeasurementGoal?
 
   // الإحالات: كود المستخدم + من أحاله
   referralCode   String?  @unique
@@ -138,10 +140,13 @@ model Doctor {
   user             User     @relation("DoctorAccount", fields: [userId], references: [id], onDelete: Cascade)
   title            String?  // e.g. "Fitness Coach"
   titleAr          String?  // e.g. "طبيب تغذية"
+  titleIt          String?  // e.g. "Personal Trainer"
   specialization   String?
   specializationAr String?
+  specializationIt String?
   bio              String?  @db.Text
   bioAr            String?  @db.Text
+  bioIt            String?  @db.Text
   isActive         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -179,7 +184,7 @@ model Profile {
   // تفضيلات الشاشة (Profile screen)
   notificationsEnabled Boolean?           @default(true)
   darkMode             Boolean?           @default(false)
-  language             String?            @default("en")  // en, ar
+  language             String?            @default("en")  // en, ar, it
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 }
@@ -287,8 +292,10 @@ model Channel {
   id            String   @id @default(cuid())
   name          String
   nameAr        String?
+  nameIt        String?
   description   String?  @db.Text
   descriptionAr String?  @db.Text
+  descriptionIt String?  @db.Text
   icon          String?  // emoji أو رمز مثل 💪
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -316,6 +323,7 @@ model Meal {
   id               String    @id @default(cuid())
   name             String
   nameAr           String?
+  nameIt           String?
   imageUrl         String?
   prepTimeMinutes  Int       // وقت التحضير بالدقائق
   calories         Int
@@ -406,16 +414,44 @@ enum WorkoutSessionStatus {
   ABANDONED
 }
 
+model MeasurementBaseline {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weight    Float
+  bodyFat   Float?
+  muscleMass Float?
+  water     Float?
+  waist     Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MeasurementGoal {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weight    Float
+  bodyFat   Float?
+  muscleMass Float?
+  water     Float?
+  waist     Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // التمارين الأساسية (الأدمن/الدكتور يضيفها)
 model Exercise {
   id               String   @id @default(cuid())
   name             String
   nameAr           String?
+  nameIt           String?
   imageUrl         String?
   description      String?   @db.Text
   descriptionAr    String?   @db.Text
+  descriptionIt    String?   @db.Text
   targetMuscles    Json?     // e.g. ["CHEST", "SHOULDER", "TRICEPS"]
-  equipmentNeeded  Json?     // متطلبات التمرين (المعدات): [{ name: "Dumbbells", nameAr: "دمبل" }, ...]
+  equipmentNeeded  Json?     // متطلبات التمرين (المعدات): [{ name: "Dumbbells", nameAr: "دمبل", nameIt: "Manubri" }, ...]
   addedByUserId    String
   addedByUser      User      @relation(fields: [addedByUserId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
@@ -537,6 +573,23 @@ enum SubscriptionPlan {
   PREMIUM
 }
 
+model SubscriptionPackage {
+  id            String   @id @default(cuid())
+  name          String
+  durationMonths Int
+  listPrice     Decimal  @db.Decimal(10, 2)
+  payPrice      Decimal  @db.Decimal(10, 2)
+  currency      String   @default("EGP") @db.VarChar(10)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isActive])
+  @@index([durationMonths])
+}
+
 model Subscription {
   id                    String            @id @default(cuid())
   userId                String            @unique
@@ -544,10 +597,46 @@ model Subscription {
   plan                  SubscriptionPlan  @default(FREE)
   endsAt                DateTime?         // انتهاء الاشتراك الحالي
   discountPercentToApply Int?             @default(0)  // خصم الإحالات للتجديد القادم (يُصفّر بعد التطبيق)
+  packageId             String?
+  package               SubscriptionPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  startedAt             DateTime?
+  lastListPrice         Decimal?          @db.Decimal(10, 2)
+  lastPayPrice          Decimal?          @db.Decimal(10, 2)
+  lastCurrency          String?           @db.VarChar(10)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
   @@index([userId])
+}
+
+model ReferralSettings {
+  id                    String   @id @default(cuid())
+  discountPercentPerReferral Int @default(10)
+  maxDiscountPercent    Int      @default(50)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String?  @db.VarChar(255)
+  titleAr   String?  @db.VarChar(255)
+  titleIt   String?  @db.VarChar(255)
+  description   String? @db.Text
+  descriptionAr String? @db.Text
+  descriptionIt String? @db.Text
+  imageUrl  String   @db.VarChar(500)
+  link      String?  @db.VarChar(500)
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+  @@index([startsAt])
+  @@index([endsAt])
 }
 
 // قائمة البقالة (Grocery List)

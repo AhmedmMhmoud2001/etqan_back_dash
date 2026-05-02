@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { get, post, patch, del, uploadImage } from '../../api';
+import { get, post, patch, del, uploadImage, resolveMediaUrl } from '../../api';
 import { IconEdit, IconDelete, IconAssignDoctor, IconDeactivate, IconActivate, IconView } from '../../components/ActionIcons';
 
 const MEASUREMENT_SYSTEM = [{ value: 'METRIC', label: 'متري' }, { value: 'IMPERIAL', label: 'إمبراطوري' }];
@@ -359,7 +359,7 @@ export default function AdminUsers() {
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 text-start">
                       {user.profile?.imageUrl || user.imageUrl ? (
-                        <img src={user.profile?.imageUrl || user.imageUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-600" />
+                        <img src={resolveMediaUrl(user.profile?.imageUrl || user.imageUrl)} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm font-medium shrink-0">{(user.name || '?').charAt(0).toUpperCase()}</span>
                       )}
@@ -586,12 +586,18 @@ export default function AdminUsers() {
                       {workoutSessions.map((sess) => (
                         <div key={sess.id} className="rounded-lg border border-slate-200 dark:border-slate-600 p-3 bg-slate-50/50 dark:bg-slate-700/30 text-sm">
                           <div className="font-medium text-slate-800 dark:text-slate-100 mb-2">
-                            {(sess.exercises?.[0]?.exercise ? (lang === 'ar' ? sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.name : sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr) : (lang === 'ar' ? 'جلسة تمرين' : 'Workout'))} — {sess.startedAt ? new Date(sess.startedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : ''} {sess.status === 'COMPLETED' ? (lang === 'ar' ? '(مكتملة)' : '(completed)') : ''}
+                            {(sess.exercises?.[0]?.exercise
+                              ? (lang === 'ar'
+                                ? sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.nameIt || sess.exercises[0].exercise.name
+                                : lang === 'it'
+                                  ? sess.exercises[0].exercise.nameIt || sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr
+                                  : sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.nameIt)
+                              : (lang === 'ar' ? 'جلسة تمرين' : lang === 'it' ? 'Allenamento' : 'Workout'))} — {sess.startedAt ? new Date(sess.startedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : lang === 'it' ? 'it-IT' : 'en-US') : ''} {sess.status === 'COMPLETED' ? (lang === 'ar' ? '(مكتملة)' : lang === 'it' ? '(completato)' : '(completed)') : ''}
                           </div>
                           <ul className="space-y-2">
                             {(sess.exercises || []).map((ex) => (
                               <li key={ex.id} className="pl-2 border-l-2 border-primary-400/50">
-                                <span className="font-medium text-slate-700 dark:text-slate-200">{lang === 'ar' ? ex.exercise?.nameAr || ex.exercise?.name : ex.exercise?.name || ex.exercise?.nameAr}</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-200">{lang === 'ar' ? ex.exercise?.nameAr || ex.exercise?.nameIt || ex.exercise?.name : lang === 'it' ? ex.exercise?.nameIt || ex.exercise?.name || ex.exercise?.nameAr : ex.exercise?.name || ex.exercise?.nameAr || ex.exercise?.nameIt}</span>
                                 <span className="text-slate-500 dark:text-slate-400 ml-1">({ex.sets} {lang === 'ar' ? 'مجموعات' : 'sets'} × {ex.repMin}-{ex.repMax} {lang === 'ar' ? 'تكرار' : 'reps'})</span>
                                 <div className="mt-1 text-slate-600 dark:text-slate-300">
                                   {lang === 'ar' ? 'العدات المنفذة' : 'Reps done'}: {(ex.setsLog || []).map((set) => set.actualReps != null ? set.actualReps : '—').join(', ')}
@@ -781,7 +787,7 @@ export default function AdminUsers() {
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-4 items-start">
                       <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 shrink-0">
-                        {form.imageUrl ? <img src={form.imageUrl} alt="" className="w-full h-full object-cover" /> : <span className="w-full h-full flex items-center justify-center text-2xl text-slate-400">👤</span>}
+                        {form.imageUrl ? <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-full h-full object-cover" /> : <span className="w-full h-full flex items-center justify-center text-2xl text-slate-400">👤</span>}
                       </div>
                       <div className="flex-1 min-w-0">
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('profilePicture')}</label>

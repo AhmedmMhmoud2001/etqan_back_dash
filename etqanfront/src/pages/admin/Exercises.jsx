@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { get, post, patch, del, uploadImage } from '../../api';
+import { get, post, patch, del, uploadImage, resolveMediaUrl } from '../../api';
 import { IconEdit, IconDelete } from '../../components/ActionIcons';
 
 export default function AdminExercises() {
@@ -17,7 +17,14 @@ export default function AdminExercises() {
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [form, setForm] = useState({ name: '', nameAr: '', description: '', descriptionAr: '', imageUrl: '', targetMuscles: '', equipmentNeeded: [] });
+  const [form, setForm] = useState({ name: '', nameAr: '', nameIt: '', description: '', descriptionAr: '', descriptionIt: '', imageUrl: '', targetMuscles: '', equipmentNeeded: [] });
+
+  const pick = (obj, base) => {
+    if (!obj) return '';
+    if (lang === 'ar') return obj[`${base}Ar`] || obj[base] || obj[`${base}It`] || '';
+    if (lang === 'it') return obj[`${base}It`] || obj[base] || obj[`${base}Ar`] || '';
+    return obj[base] || obj[`${base}Ar`] || obj[`${base}It`] || '';
+  };
 
   const loadExercises = async () => {
     setLoading(true);
@@ -45,7 +52,7 @@ export default function AdminExercises() {
   }, [search]);
 
   const openCreate = () => {
-    setForm({ name: '', nameAr: '', description: '', descriptionAr: '', imageUrl: '', targetMuscles: '', equipmentNeeded: [] });
+    setForm({ name: '', nameAr: '', nameIt: '', description: '', descriptionAr: '', descriptionIt: '', imageUrl: '', targetMuscles: '', equipmentNeeded: [] });
     setSelected(null);
     setModal('create');
   };
@@ -56,8 +63,10 @@ export default function AdminExercises() {
     setForm({
       name: ex.name || '',
       nameAr: ex.nameAr || '',
+      nameIt: ex.nameIt || '',
       description: ex.description || '',
       descriptionAr: ex.descriptionAr || '',
+      descriptionIt: ex.descriptionIt || '',
       imageUrl: ex.imageUrl || '',
       targetMuscles: Array.isArray(ex.targetMuscles) ? ex.targetMuscles.join(', ') : (ex.targetMuscles || ''),
       equipmentNeeded: eq.length ? eq : [],
@@ -71,8 +80,10 @@ export default function AdminExercises() {
     const body = {
       name: form.name,
       nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
       description: form.description || undefined,
       descriptionAr: form.descriptionAr || undefined,
+      descriptionIt: form.descriptionIt || undefined,
       imageUrl: form.imageUrl || undefined,
       targetMuscles: form.targetMuscles ? form.targetMuscles.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
     };
@@ -95,12 +106,14 @@ export default function AdminExercises() {
     const body = {
       name: form.name,
       nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
       description: form.description || undefined,
       descriptionAr: form.descriptionAr || undefined,
+      descriptionIt: form.descriptionIt || undefined,
       imageUrl: form.imageUrl || undefined,
       targetMuscles: form.targetMuscles ? form.targetMuscles.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
-      equipmentNeeded: Array.isArray(form.equipmentNeeded) && form.equipmentNeeded.filter((eq) => (eq?.name || eq?.nameAr)).length > 0
-        ? form.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr)
+      equipmentNeeded: Array.isArray(form.equipmentNeeded) && form.equipmentNeeded.filter((eq) => (eq?.name || eq?.nameAr || eq?.nameIt)).length > 0
+        ? form.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr || eq?.nameIt)
         : undefined,
     };
     const { res, data } = await patch(`/exercises/${selected.id}`, body);
@@ -175,18 +188,18 @@ export default function AdminExercises() {
                   <tr key={ex.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 text-start">
                       {ex.imageUrl ? (
-                        <img src={ex.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                        <img src={resolveMediaUrl(ex.imageUrl)} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>💪</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{ex.name} {ex.nameAr ? `(${ex.nameAr})` : ''}</td>
-                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-xs truncate">{ex.description || '—'}</td>
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{pick(ex, 'name') || '—'}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-xs truncate">{pick(ex, 'description') || '—'}</td>
                     <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 text-sm">
-                      {Array.isArray(ex.equipmentNeeded) && ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr).length > 0
-                        ? ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr).map((eq, i) => (
+                      {Array.isArray(ex.equipmentNeeded) && ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr || eq?.nameIt).length > 0
+                        ? ex.equipmentNeeded.filter((eq) => eq?.name || eq?.nameAr || eq?.nameIt).map((eq, i) => (
                             <span key={i} className="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-600 text-xs">
-                              {lang === 'ar' ? (eq.nameAr || eq.name) : (eq.name || eq.nameAr)}
+                              {pick(eq, 'name')}
                             </span>
                           ))
                         : '—'}
@@ -220,6 +233,10 @@ export default function AdminExercises() {
                 <input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label>
+                <input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('description')} (EN)</label>
                 <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
@@ -228,8 +245,12 @@ export default function AdminExercises() {
                 <textarea value={form.descriptionAr} onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label>
+                <textarea value={form.descriptionIt} onChange={(e) => setForm((f) => ({ ...f, descriptionIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('imageUrl')}</label>
-                {form.imageUrl && <img src={form.imageUrl} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
+                {form.imageUrl && <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -259,11 +280,12 @@ export default function AdminExercises() {
                     <div className="flex gap-2">
                       <input type="text" placeholder={t('nameEn')} value={eq?.name || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], name: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
                       <input type="text" placeholder={t('nameAr')} dir="rtl" value={eq?.nameAr || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], nameAr: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
+                      <input type="text" placeholder={t('nameIt')} value={eq?.nameIt || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], nameIt: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
                     </div>
                     <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: (f.equipmentNeeded || []).filter((_, i) => i !== idx) }))} className="self-end text-xs text-red-600 dark:text-red-300">{t('delete')}</button>
                   </div>
                 ))}
-                <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: [...(f.equipmentNeeded || []), { name: '', nameAr: '' }] }))} className="mt-1 text-sm text-primary-600 dark:text-primary-300">+ {t('addEquipment')}</button>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: [...(f.equipmentNeeded || []), { name: '', nameAr: '', nameIt: '' }] }))} className="mt-1 text-sm text-primary-600 dark:text-primary-300">+ {t('addEquipment')}</button>
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>
@@ -288,6 +310,10 @@ export default function AdminExercises() {
                 <input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label>
+                <input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('description')} (EN)</label>
                 <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
@@ -296,8 +322,12 @@ export default function AdminExercises() {
                 <textarea value={form.descriptionAr} onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label>
+                <textarea value={form.descriptionIt} onChange={(e) => setForm((f) => ({ ...f, descriptionIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('imageUrl')}</label>
-                {form.imageUrl && <img src={form.imageUrl} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
+                {form.imageUrl && <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -327,11 +357,12 @@ export default function AdminExercises() {
                     <div className="flex gap-2">
                       <input type="text" placeholder={t('nameEn')} value={eq?.name || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], name: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
                       <input type="text" placeholder={t('nameAr')} dir="rtl" value={eq?.nameAr || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], nameAr: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
+                      <input type="text" placeholder={t('nameIt')} value={eq?.nameIt || ''} onChange={(e) => setForm((f) => { const next = [...(f.equipmentNeeded || [])]; next[idx] = { ...next[idx], nameIt: e.target.value }; return { ...f, equipmentNeeded: next }; })} className="flex-1 rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-1 text-sm" />
                     </div>
                     <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: (f.equipmentNeeded || []).filter((_, i) => i !== idx) }))} className="self-end text-xs text-red-600 dark:text-red-300">{t('delete')}</button>
                   </div>
                 ))}
-                <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: [...(f.equipmentNeeded || []), { name: '', nameAr: '' }] }))} className="mt-1 text-sm text-primary-600 dark:text-primary-300">+ {t('addEquipment')}</button>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, equipmentNeeded: [...(f.equipmentNeeded || []), { name: '', nameAr: '', nameIt: '' }] }))} className="mt-1 text-sm text-primary-600 dark:text-primary-300">+ {t('addEquipment')}</button>
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>

@@ -30,6 +30,7 @@ router.get(
 );
 
 // ——— الدكتور/الأدمن: إدارة الخطط ———
+router.get('/my-created', authorize('DOCTOR'), asyncHandler(userWeeklyPlanController.listMyCreated));
 router.get('/doctor/:doctorId/plans', authorize('ADMIN', 'DOCTOR'), asyncHandler(userWeeklyPlanController.listByDoctor));
 
 router.post(

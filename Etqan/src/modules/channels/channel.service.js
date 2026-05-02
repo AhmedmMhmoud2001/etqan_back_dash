@@ -1,5 +1,6 @@
 const channelRepository = require('./channel.repository');
 const channelMessageRepository = require('./channelMessage.repository');
+const { shouldRemoveMessage } = require('../../utils/moderation');
 
 const formatMessage = (msg) => {
   if (!msg) return null;
@@ -51,6 +52,9 @@ const sendMessage = async (channelId, userId, data) => {
     err.statusCode = 400;
     throw err;
   }
+  if (content && shouldRemoveMessage(content)) {
+    return { removed: true };
+  }
   const msg = await channelMessageRepository.create({
     channelId,
     senderId: userId,
@@ -76,8 +80,10 @@ const createChannel = async (data) => {
   return channelRepository.create({
     name: data.name.trim(),
     nameAr: data.nameAr?.trim() || null,
+    nameIt: data.nameIt?.trim() || null,
     description: data.description ?? null,
     descriptionAr: data.descriptionAr ?? null,
+    descriptionIt: data.descriptionIt ?? null,
     icon: data.icon ?? null,
   });
 };
@@ -92,8 +98,10 @@ const updateChannel = async (id, data) => {
   return channelRepository.update(id, {
     name: data.name,
     nameAr: data.nameAr,
+    nameIt: data.nameIt,
     description: data.description,
     descriptionAr: data.descriptionAr,
+    descriptionIt: data.descriptionIt,
     icon: data.icon,
     isActive: data.isActive,
   });

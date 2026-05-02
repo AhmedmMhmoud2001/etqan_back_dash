@@ -20,6 +20,7 @@ const ingredientRules = () => [
 const createMealRules = () => [
   body('name').trim().notEmpty().withMessage('Meal name is required').isLength({ max: 200 }),
   body('nameAr').optional().trim().isLength({ max: 200 }),
+  body('nameIt').optional().trim().isLength({ max: 200 }),
   body('imageUrl').optional().trim().custom((v) => !v || v.startsWith('/') || /^https?:\/\//i.test(v)).withMessage('imageUrl must be a URL or path starting with /'),
   body('prepTimeMinutes').isInt({ min: 0 }).withMessage('prepTimeMinutes must be a non-negative integer'),
   body('calories').isInt({ min: 0 }).withMessage('calories must be a non-negative integer'),
@@ -36,6 +37,7 @@ const updateMealRules = () => [
   param('id').trim().notEmpty().withMessage('Meal id is required'),
   body('name').optional().trim().notEmpty().isLength({ max: 200 }),
   body('nameAr').optional().trim().isLength({ max: 200 }),
+  body('nameIt').optional().trim().isLength({ max: 200 }),
   body('imageUrl').optional().trim().custom((v) => !v || v.startsWith('/') || /^https?:\/\//i.test(v)).withMessage('imageUrl must be a URL or path starting with /'),
   body('prepTimeMinutes').optional().isInt({ min: 0 }),
   body('calories').optional().isInt({ min: 0 }),

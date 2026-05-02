@@ -23,10 +23,13 @@ export default function AdminDoctors() {
     password: '',
     title: '',
     titleAr: '',
+    titleIt: '',
     specialization: '',
     specializationAr: '',
+    specializationIt: '',
     bio: '',
     bioAr: '',
+    bioIt: '',
   });
 
   const loadDoctors = async () => {
@@ -53,7 +56,7 @@ export default function AdminDoctors() {
   }, [page]);
 
   const openCreate = () => {
-    setForm({ name: '', email: '', password: '', title: '', specialization: '', bio: '' });
+    setForm({ name: '', email: '', password: '', title: '', titleAr: '', titleIt: '', specialization: '', specializationAr: '', specializationIt: '', bio: '', bioAr: '', bioIt: '' });
     setSelected(null);
     setModal('create');
   };
@@ -65,8 +68,14 @@ export default function AdminDoctors() {
       email: doc.user?.email || '',
       password: '',
       title: doc.title || '',
+      titleAr: doc.titleAr || '',
+      titleIt: doc.titleIt || '',
       specialization: doc.specialization || '',
+      specializationAr: doc.specializationAr || '',
+      specializationIt: doc.specializationIt || '',
       bio: doc.bio || '',
+      bioAr: doc.bioAr || '',
+      bioIt: doc.bioIt || '',
     });
     setModal('edit');
   };
@@ -80,10 +89,13 @@ export default function AdminDoctors() {
       password: form.password,
       title: form.title || undefined,
       titleAr: form.titleAr || undefined,
+      titleIt: form.titleIt || undefined,
       specialization: form.specialization || undefined,
       specializationAr: form.specializationAr || undefined,
+      specializationIt: form.specializationIt || undefined,
       bio: form.bio || undefined,
       bioAr: form.bioAr || undefined,
+      bioIt: form.bioIt || undefined,
     });
     if (res.status === 401) {
       navigate('/login', { replace: true });
@@ -105,10 +117,13 @@ export default function AdminDoctors() {
       email: form.email,
       title: form.title || undefined,
       titleAr: form.titleAr || undefined,
+      titleIt: form.titleIt || undefined,
       specialization: form.specialization || undefined,
       specializationAr: form.specializationAr || undefined,
+      specializationIt: form.specializationIt || undefined,
       bio: form.bio || undefined,
       bioAr: form.bioAr || undefined,
+      bioIt: form.bioIt || undefined,
     };
     if (form.password) body.password = form.password;
     const { res, data } = await patch(`/admin/doctors/${selected.id}`, body);
@@ -178,8 +193,8 @@ export default function AdminDoctors() {
                   <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{doc.user?.name || '—'}</td>
                     <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300">{doc.user?.email || '—'}</td>
-                    <td className="px-4 py-3 text-start">{doc.title || '—'}</td>
-                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300">{doc.specialization || '—'}</td>
+                    <td className="px-4 py-3 text-start">{lang === 'ar' ? (doc.titleAr || doc.titleIt || doc.title) : lang === 'it' ? (doc.titleIt || doc.title || doc.titleAr) : (doc.title || doc.titleAr || doc.titleIt) || '—'}</td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300">{lang === 'ar' ? (doc.specializationAr || doc.specializationIt || doc.specialization) : lang === 'it' ? (doc.specializationIt || doc.specialization || doc.specializationAr) : (doc.specialization || doc.specializationAr || doc.specializationIt) || '—'}</td>
                     <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end items-center">
                         <button type="button" onClick={() => openEdit(doc)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
@@ -263,6 +278,10 @@ export default function AdminDoctors() {
                 <input type="text" value={form.titleAr} onChange={(e) => setForm((f) => ({ ...f, titleAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="مثل: مدرب لياقة" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('titleIt')}</label>
+                <input type="text" value={form.titleIt} onChange={(e) => setForm((f) => ({ ...f, titleIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="es. Allenatore fitness" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('specialization')}</label>
                 <input type="text" value={form.specialization} onChange={(e) => setForm((f) => ({ ...f, specialization: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="e.g. Nutrition" />
               </div>
@@ -271,12 +290,20 @@ export default function AdminDoctors() {
                 <input type="text" value={form.specializationAr} onChange={(e) => setForm((f) => ({ ...f, specializationAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="مثل: تغذية" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('specializationIt')}</label>
+                <input type="text" value={form.specializationIt} onChange={(e) => setForm((f) => ({ ...f, specializationIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="es. Nutrizione" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('description')} (EN)</label>
                 <textarea value={form.bio} onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionAr')}</label>
                 <textarea value={form.bioAr} onChange={(e) => setForm((f) => ({ ...f, bioAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label>
+                <textarea value={form.bioIt} onChange={(e) => setForm((f) => ({ ...f, bioIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>
@@ -313,6 +340,10 @@ export default function AdminDoctors() {
                 <input type="text" value={form.titleAr} onChange={(e) => setForm((f) => ({ ...f, titleAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('titleIt')}</label>
+                <input type="text" value={form.titleIt} onChange={(e) => setForm((f) => ({ ...f, titleIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('specialization')}</label>
                 <input type="text" value={form.specialization} onChange={(e) => setForm((f) => ({ ...f, specialization: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
               </div>
@@ -321,12 +352,20 @@ export default function AdminDoctors() {
                 <input type="text" value={form.specializationAr} onChange={(e) => setForm((f) => ({ ...f, specializationAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('specializationIt')}</label>
+                <input type="text" value={form.specializationIt} onChange={(e) => setForm((f) => ({ ...f, specializationIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('description')} (EN)</label>
                 <textarea value={form.bio} onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionAr')}</label>
                 <textarea value={form.bioAr} onChange={(e) => setForm((f) => ({ ...f, bioAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label>
+                <textarea value={form.bioIt} onChange={(e) => setForm((f) => ({ ...f, bioIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} />
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button>

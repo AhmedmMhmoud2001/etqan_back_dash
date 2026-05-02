@@ -1,6 +1,7 @@
 const { prisma } = require('../../prisma/client');
 const conversationRepository = require('./conversation.repository');
 const messageRepository = require('./message.repository');
+const { shouldRemoveMessage } = require('../../utils/moderation');
 
 const formatMessage = (msg) => {
   if (!msg) return null;
@@ -88,6 +89,9 @@ const sendMessage = async (conversationId, userId, data) => {
     const err = new Error('Content or attachment is required');
     err.statusCode = 400;
     throw err;
+  }
+  if (content && shouldRemoveMessage(content)) {
+    return { removed: true };
   }
   const msg = await messageRepository.create({
     conversationId,

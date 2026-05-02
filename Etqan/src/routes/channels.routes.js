@@ -1,7 +1,7 @@
 const express = require('express');
 const channelController = require('../modules/channels/channel.controller');
 const channelValidator = require('../modules/channels/channel.validator');
-const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { authenticate, authorize, requirePremium } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
@@ -15,6 +15,7 @@ router.get(
   '/:id/messages',
   authenticate,
   authorize('USER', 'DOCTOR'),
+  requirePremium,
   channelValidator.channelIdParam(),
   channelValidator.validate,
   asyncHandler(channelController.getChannelMessages)
@@ -23,6 +24,7 @@ router.post(
   '/:id/messages',
   authenticate,
   authorize('USER', 'DOCTOR'),
+  requirePremium,
   channelValidator.sendMessageRules(),
   channelValidator.validate,
   asyncHandler(channelController.sendMessage)

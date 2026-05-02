@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { get, post, patch, del, uploadImage } from '../../api';
+import { get, post, patch, del, uploadImage, resolveMediaUrl } from '../../api';
 import { IconDelete, IconComment, IconShare, IconEdit } from '../../components/ActionIcons';
 
 const PREVIEW_LEN = 100;
@@ -11,6 +11,8 @@ export default function AdminCommunityPosts() {
   const { lang } = useLang();
   const t = useTranslation(lang);
   const navigate = useNavigate();
+  const me = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const isDoctor = me?.role === 'DOCTOR';
   const [posts, setPosts] = useState([]);
   const [total, setTotal] = useState(0);
   const [users, setUsers] = useState([]);
@@ -45,6 +47,7 @@ export default function AdminCommunityPosts() {
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   const loadUsers = async () => {
+    if (isDoctor) { setUsers([]); return; }
     const { res, data } = await get('/admin/users?limit=500&role=USER');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
@@ -56,8 +59,8 @@ export default function AdminCommunityPosts() {
   const loadPosts = async () => {
     setLoadingPosts(true);
     setError('');
-    let url = '/admin/community/posts?limit=300';
-    if (filterUserId) url += `&userId=${encodeURIComponent(filterUserId)}`;
+    let url = isDoctor ? '/community/posts?limit=100' : '/admin/community/posts?limit=300';
+    if (!isDoctor && filterUserId) url += `&userId=${encodeURIComponent(filterUserId)}`;
     const { res, data } = await get(url);
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (!res.ok) {
@@ -81,7 +84,7 @@ export default function AdminCommunityPosts() {
 
   useEffect(() => {
     loadPosts();
-  }, [filterUserId]);
+  }, [filterUserId, isDoctor]);
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
@@ -212,7 +215,7 @@ export default function AdminCommunityPosts() {
 
   const handleDelete = async (post) => {
     if (!window.confirm(t('confirmDelete'))) return;
-    const { res } = await del(`/admin/community/posts/${post.id}`);
+    const { res } = await del(isDoctor ? `/community/posts/${post.id}` : `/admin/community/posts/${post.id}`);
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
       loadPosts();
@@ -259,7 +262,7 @@ export default function AdminCommunityPosts() {
               </div>
             ) : (
               <div className="flex items-start gap-3">
-                {imagePreview && <img src={imagePreview} alt="" className="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />}
+                {imagePreview && <img src={resolveMediaUrl(imagePreview)} alt="" className="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />}
                 <button type="button" onClick={clearImage} className="text-sm text-red-600 dark:text-red-400 hover:underline">{lang === 'ar' ? 'إزالة الصورة' : 'Remove image'}</button>
               </div>
             )}
@@ -271,19 +274,23 @@ export default function AdminCommunityPosts() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
-        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          {lang === 'ar' ? 'المستخدم (الناشر)' : 'User (author)'}:
-        </label>
-        <select
-          value={filterUserId}
-          onChange={(e) => setFilterUserId(e.target.value)}
-          className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[220px]"
-        >
-          <option value="">— {lang === 'ar' ? 'كل المستخدمين' : 'All users'} —</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-          ))}
-        </select>
+        {!isDoctor && (
+          <>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {lang === 'ar' ? 'المستخدم (الناشر)' : 'User (author)'}:
+            </label>
+            <select
+              value={filterUserId}
+              onChange={(e) => setFilterUserId(e.target.value)}
+              className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[220px]"
+            >
+              <option value="">— {lang === 'ar' ? 'كل المستخدمين' : 'All users'} —</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm overflow-hidden">
@@ -313,11 +320,13 @@ export default function AdminCommunityPosts() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
-                {posts.map((post) => (
+                {posts.map((post) => {
+                  const isOwn = String(post?.userId || '') === String(me?.id || '');
+                  return (
                   <tr key={post.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 text-start">
                       {post.imageUrl ? (
-                        <img src={post.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                        <img src={resolveMediaUrl(post.imageUrl)} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>📝</span>
                       )}
@@ -367,6 +376,7 @@ export default function AdminCommunityPosts() {
                         <button
                           type="button"
                           onClick={() => handleDelete(post)}
+                          disabled={isDoctor && !isOwn}
                           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600"
                           title={t('delete')}
                           aria-label={t('delete')}
@@ -376,7 +386,8 @@ export default function AdminCommunityPosts() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -402,7 +413,7 @@ export default function AdminCommunityPosts() {
                   </div>
                 ) : (
                   <div className="flex items-start gap-3">
-                    <img src={editImagePreview || editImageUrl} alt="" className="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                    <img src={resolveMediaUrl(editImagePreview || editImageUrl)} alt="" className="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
                     <div className="flex flex-col gap-1">
                       <button type="button" onClick={clearEditImage} className="text-sm text-red-600 dark:text-red-400 hover:underline">{lang === 'ar' ? 'إزالة الصورة' : 'Remove image'}</button>
                       {!uploadingEditImage && (

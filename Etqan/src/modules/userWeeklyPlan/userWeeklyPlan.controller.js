@@ -53,6 +53,15 @@ const listByDoctor = asyncHandler(async (req, res) => {
   success(res, { plans: list }, 'Plans by doctor');
 });
 
+const listMyCreated = asyncHandler(async (req, res) => {
+  const doctorId = await userWeeklyPlanService.getDoctorIdForUser(req.user);
+  if (!doctorId) {
+    return res.status(403).json({ success: false, message: 'Doctor only' });
+  }
+  const list = await userWeeklyPlanService.listByDoctor(doctorId);
+  success(res, { plans: list }, 'My created workout plans');
+});
+
 const update = asyncHandler(async (req, res) => {
   const plan = await userWeeklyPlanService.update(req.params.id, req.body, req.user);
   success(res, plan, 'Plan updated');
@@ -71,6 +80,7 @@ module.exports = {
   getWeeklyProgress,
   listMyPlans,
   listByDoctor,
+  listMyCreated,
   update,
   remove,
 };

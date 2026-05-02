@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(authenticate);
 
+router.get('/me', asyncHandler(referralController.getMyInfo));
 router.get('/my-status', asyncHandler(referralController.getMyStatus));
 router.get('/list', asyncHandler(referralController.listMyReferrals));
 

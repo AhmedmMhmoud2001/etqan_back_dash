@@ -12,7 +12,9 @@ export function SocketProvider({ children }) {
     const token = getToken();
     if (!token) return;
 
-    const socketUrl = import.meta.env.DEV ? '' : window.location.origin;
+    const backend = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
+    const socketUrl =
+      backend || (import.meta.env.DEV ? '' : window.location.origin);
     const s = io(socketUrl, {
       path: '/socket.io',
       auth: { token },

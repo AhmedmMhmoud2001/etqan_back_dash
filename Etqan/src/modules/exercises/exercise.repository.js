@@ -24,6 +24,7 @@ const findMany = async (filters = {}) => {
     where.OR = [
       { name: { contains: search.trim() } },
       { nameAr: { contains: search.trim() } },
+      { nameIt: { contains: search.trim() } },
     ];
   }
   const [items, total] = await Promise.all([

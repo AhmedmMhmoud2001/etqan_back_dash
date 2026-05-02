@@ -14,4 +14,11 @@ const listDoctors = asyncHandler(async (req, res) => {
   success(res, result, 'Doctors list');
 });
 
-module.exports = { getDoctor, listDoctors };
+const listMyPatients = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 500);
+  const result = await doctorService.listMyPatients(req.user, page, limit);
+  success(res, result, 'My patients');
+});
+
+module.exports = { getDoctor, listDoctors, listMyPatients };

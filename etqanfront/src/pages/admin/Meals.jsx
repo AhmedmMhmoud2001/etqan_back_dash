@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { get, post, patch, del, uploadImage } from '../../api';
+import { get, post, patch, del, uploadImage, resolveMediaUrl } from '../../api';
 import { IconEdit, IconDelete } from '../../components/ActionIcons';
 
 const MEAL_TYPES = ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'];
@@ -24,6 +24,7 @@ export default function AdminMeals() {
   const [form, setForm] = useState({
     name: '',
     nameAr: '',
+    nameIt: '',
     mealType: 'LUNCH',
     calories: 0,
     proteinG: 0,
@@ -63,6 +64,7 @@ export default function AdminMeals() {
     setForm({
       name: '',
       nameAr: '',
+      nameIt: '',
       mealType: 'LUNCH',
       calories: 0,
       proteinG: 0,
@@ -82,6 +84,7 @@ export default function AdminMeals() {
     setForm({
       name: meal.name || '',
       nameAr: meal.nameAr || '',
+      nameIt: meal.nameIt || '',
       mealType: meal.mealType || 'LUNCH',
       calories: meal.calories ?? 0,
       proteinG: meal.proteinG ?? 0,
@@ -117,6 +120,7 @@ export default function AdminMeals() {
     const body = {
       name: form.name,
       nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
       mealType: form.mealType,
       calories: Number(form.calories) || 0,
       proteinG: Number(form.proteinG) || 0,
@@ -145,6 +149,7 @@ export default function AdminMeals() {
     const body = {
       name: form.name,
       nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
       mealType: form.mealType,
       calories: Number(form.calories) || 0,
       proteinG: Number(form.proteinG) || 0,
@@ -234,12 +239,14 @@ export default function AdminMeals() {
                   <tr key={meal.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="px-4 py-3 text-start">
                       {meal.imageUrl ? (
-                        <img src={meal.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                        <img src={resolveMediaUrl(meal.imageUrl)} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
                       ) : (
                         <span className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-600 inline-flex items-center justify-center text-slate-400 text-lg shrink-0" title={lang === 'ar' ? 'لا صورة' : 'No image'}>🍽️</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{meal.name}</td>
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">
+                      {lang === 'ar' ? (meal.nameAr || meal.nameIt || meal.name) : lang === 'it' ? (meal.nameIt || meal.name || meal.nameAr) : (meal.name || meal.nameAr || meal.nameIt)}
+                    </td>
                     <td className="px-4 py-3 text-start">{t('mealType' + (meal.mealType || '').charAt(0) + (meal.mealType || '').slice(1).toLowerCase())}</td>
                     <td className="px-4 py-3 text-start">{meal.calories ?? 0}</td>
                     <td className="px-4 py-3 text-start">{meal.proteinG ?? 0}</td>
@@ -289,6 +296,10 @@ export default function AdminMeals() {
                 <input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="مثل: دجاج مشوي" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label>
+                <input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="es. Pollo alla griglia" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('mealType')}</label>
                 <select value={form.mealType} onChange={(e) => setForm((f) => ({ ...f, mealType: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2">
                   {MEAL_TYPES.map((type) => <option key={type} value={type}>{t('mealType' + type.charAt(0) + type.slice(1).toLowerCase())}</option>)}
@@ -318,7 +329,7 @@ export default function AdminMeals() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('imageUrl')}</label>
-                {form.imageUrl && <img src={form.imageUrl} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
+                {form.imageUrl && <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -378,6 +389,10 @@ export default function AdminMeals() {
                 <input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label>
+                <input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('mealType')}</label>
                 <select value={form.mealType} onChange={(e) => setForm((f) => ({ ...f, mealType: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2">
                   {MEAL_TYPES.map((type) => <option key={type} value={type}>{t('mealType' + type.charAt(0) + type.slice(1).toLowerCase())}</option>)}
@@ -395,7 +410,7 @@ export default function AdminMeals() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('imageUrl')}</label>
-                {form.imageUrl && <img src={form.imageUrl} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
+                {form.imageUrl && <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-20 h-20 object-cover rounded-lg mb-2" />}
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"

@@ -30,10 +30,13 @@ const createDoctorRules = () => [
   body('emailVerified').optional().isBoolean(),
   body('title').optional().trim().isLength({ max: 100 }),
   body('titleAr').optional().trim().isLength({ max: 100 }),
+  body('titleIt').optional().trim().isLength({ max: 100 }),
   body('specialization').optional().trim().isLength({ max: 200 }),
   body('specializationAr').optional().trim().isLength({ max: 200 }),
+  body('specializationIt').optional().trim().isLength({ max: 200 }),
   body('bio').optional().trim().isLength({ max: 5000 }),
   body('bioAr').optional().trim().isLength({ max: 5000 }),
+  body('bioIt').optional().trim().isLength({ max: 5000 }),
 ];
 
 const updateDoctorRules = () => [
@@ -44,10 +47,13 @@ const updateDoctorRules = () => [
   body('isActive').optional().isBoolean(),
   body('title').optional().trim().isLength({ max: 100 }),
   body('titleAr').optional().trim().isLength({ max: 100 }),
+  body('titleIt').optional().trim().isLength({ max: 100 }),
   body('specialization').optional().trim().isLength({ max: 200 }),
   body('specializationAr').optional().trim().isLength({ max: 200 }),
+  body('specializationIt').optional().trim().isLength({ max: 200 }),
   body('bio').optional().trim().isLength({ max: 5000 }),
   body('bioAr').optional().trim().isLength({ max: 5000 }),
+  body('bioIt').optional().trim().isLength({ max: 5000 }),
 ];
 
 const idParamRules = (paramName = 'id') => [param(paramName).trim().notEmpty().withMessage(`${paramName} is required`)];

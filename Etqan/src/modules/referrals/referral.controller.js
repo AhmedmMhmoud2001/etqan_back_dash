@@ -12,7 +12,13 @@ const listMyReferrals = asyncHandler(async (req, res) => {
   success(res, { referrals: list }, 'My referrals');
 });
 
+const getMyInfo = asyncHandler(async (req, res) => {
+  const data = await referralService.getMyInfo(req.user.id);
+  success(res, data, 'My referrals info');
+});
+
 module.exports = {
   getMyStatus,
+  getMyInfo,
   listMyReferrals,
 };

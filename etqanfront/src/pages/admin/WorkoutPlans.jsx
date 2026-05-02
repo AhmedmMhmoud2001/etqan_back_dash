@@ -36,6 +36,8 @@ export default function AdminWorkoutPlans() {
   const { lang } = useLang();
   const t = useTranslation(lang);
   const navigate = useNavigate();
+  const me = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const isDoctor = me?.role === 'DOCTOR';
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -57,6 +59,7 @@ export default function AdminWorkoutPlans() {
   const [dayExercises, setDayExercises] = useState({}); // { "date": { exerciseId, sets, repMin, repMax } }
 
   const loadDoctors = async () => {
+    if (isDoctor) { setLoading(false); return; }
     const { res, data } = await get('/admin/doctors?limit=500');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
@@ -68,16 +71,28 @@ export default function AdminWorkoutPlans() {
 
   const loadPlans = async () => {
     setLoadingPlans(true);
-    const { res, data } = await get('/admin/workout-plans?limit=300');
+    const { res, data } = await get(isDoctor ? '/workout-plan/my-created' : '/admin/workout-plans?limit=300');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
-      const list = data.items ?? data.data?.items ?? data.data ?? [];
+      const d = data.data || data;
+      const list = isDoctor ? (d.plans ?? d.items ?? d ?? []) : (data.items ?? data.data?.items ?? data.data ?? []);
       setPlans(Array.isArray(list) ? list : []);
     } else setPlans([]);
     setLoadingPlans(false);
   };
 
   const loadPatientsForDoctor = async (doctorId) => {
+    if (isDoctor) {
+      setLoadingPatients(true);
+      const { res, data } = await get('/doctors/me/patients?limit=500');
+      if (res.status === 401) { navigate('/login', { replace: true }); return; }
+      if (res.ok) {
+        const d = data.data || data;
+        setPatients(d.items || d || []);
+      } else setPatients([]);
+      setLoadingPatients(false);
+      return;
+    }
     if (!doctorId) { setPatients([]); return; }
     setLoadingPatients(true);
     const { res, data } = await get(`/admin/doctors/${doctorId}/patients?limit=500`);
@@ -101,11 +116,14 @@ export default function AdminWorkoutPlans() {
   useEffect(() => { loadDoctors(); loadPlans(); }, []);
   useEffect(() => { if (modal === 'create') loadExercises(); }, [modal]);
   useEffect(() => { if (form.doctorId) loadPatientsForDoctor(form.doctorId); }, [form.doctorId]);
+  useEffect(() => { if (isDoctor) loadPatientsForDoctor('me'); }, [isDoctor]);
+  useEffect(() => { if (modal === 'create' && isDoctor) loadPatientsForDoctor('me'); }, [modal, isDoctor]);
 
   const plansToShow = useMemo(() => {
+    if (isDoctor) return plans;
     if (!selectedDoctorId) return plans;
     return plans.filter((p) => p.doctorId === selectedDoctorId);
-  }, [plans, selectedDoctorId]);
+  }, [plans, selectedDoctorId, isDoctor]);
 
   const daysForForm = useMemo(() => {
     if (!form.weekStart) return [];
@@ -141,13 +159,14 @@ export default function AdminWorkoutPlans() {
       return toLocalDateString(d);
     })();
     setForm({
-      doctorId: '',
+      doctorId: isDoctor ? 'me' : '',
       userId: '',
       weekStart: today,
       weekEnd: endDefault,
     });
     setDayExercises({});
-    setPatients([]);
+    // Don't clear doctor patients list (doctor flow relies on it).
+    if (!isDoctor) setPatients([]);
     setModal('create');
   };
 
@@ -170,7 +189,7 @@ export default function AdminWorkoutPlans() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.doctorId || !form.userId || !form.weekStart) {
+    if ((!isDoctor && !form.doctorId) || !form.userId || !form.weekStart) {
       setError(lang === 'ar' ? 'اختر الدكتور والمريض وتاريخ البداية' : 'Select doctor, patient, and start date');
       return;
     }
@@ -182,7 +201,7 @@ export default function AdminWorkoutPlans() {
     const startD = parseLocalDate(form.weekStart);
     const endD = form.weekEnd ? parseLocalDate(form.weekEnd) : (() => { const d = new Date(startD); d.setDate(d.getDate() + 6); return d; })();
     const body = {
-      doctorId: form.doctorId,
+      doctorId: isDoctor ? undefined : form.doctorId,
       userId: form.userId,
       weekStart: new Date(startD.getFullYear(), startD.getMonth(), startD.getDate(), 12, 0, 0).toISOString(),
       weekEnd: new Date(endD.getFullYear(), endD.getMonth(), endD.getDate(), 12, 0, 0).toISOString(),
@@ -260,7 +279,7 @@ export default function AdminWorkoutPlans() {
     loadPlans();
   };
 
-  const exerciseLabel = (ex) => (ex ? (lang === 'ar' ? ex.nameAr || ex.name : ex.name || ex.nameAr) : '');
+  const exerciseLabel = (ex) => (ex ? (lang === 'ar' ? ex.nameAr || ex.nameIt || ex.name : lang === 'it' ? ex.nameIt || ex.name || ex.nameAr : ex.name || ex.nameAr || ex.nameIt) : '');
 
   return (
     <div className="p-6 md:p-8">
@@ -270,16 +289,18 @@ export default function AdminWorkoutPlans() {
           <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">{t('workoutPlansDesc')}</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <select
-            value={selectedDoctorId}
-            onChange={(e) => setSelectedDoctorId(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[180px]"
-          >
-            <option value="">— {lang === 'ar' ? 'كل الأطباء' : 'All doctors'} —</option>
-            {doctors.map((d) => (
-              <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
-            ))}
-          </select>
+          {!isDoctor && (
+            <select
+              value={selectedDoctorId}
+              onChange={(e) => setSelectedDoctorId(e.target.value)}
+              className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[180px]"
+            >
+              <option value="">— {lang === 'ar' ? 'كل الأطباء' : 'All doctors'} —</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
+              ))}
+            </select>
+          )}
           <button type="button" onClick={openCreate} className="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700">
             {t('add')} {t('workoutPlans')}
           </button>
@@ -375,17 +396,23 @@ export default function AdminWorkoutPlans() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('doctor')}</label>
-                <select
-                  value={form.doctorId}
-                  onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value, userId: '' }))}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
-                  required
-                >
-                  <option value="">— {t('choose')} {t('doctor')} —</option>
-                  {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
-                  ))}
-                </select>
+                {isDoctor ? (
+                  <div className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 px-3 py-2 text-sm text-slate-700 dark:text-slate-200">
+                    {lang === 'ar' ? 'أنت (الدكتور الحالي)' : lang === 'it' ? 'Tu (dottore corrente)' : 'You (current doctor)'}
+                  </div>
+                ) : (
+                  <select
+                    value={form.doctorId}
+                    onChange={(e) => setForm((f) => ({ ...f, doctorId: e.target.value, userId: '' }))}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
+                    required
+                  >
+                    <option value="">— {t('choose')} {t('doctor')} —</option>
+                    {doctors.map((d) => (
+                      <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('patient')}</label>
@@ -394,9 +421,9 @@ export default function AdminWorkoutPlans() {
                   onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
                   required
-                  disabled={!form.doctorId || loadingPatients}
+                  disabled={(!isDoctor && !form.doctorId) || loadingPatients}
                 >
-                  <option value="">— {form.doctorId ? (loadingPatients ? t('loading') : t('choose')) : (lang === 'ar' ? 'اختر الدكتور أولاً' : 'Select doctor first')} —</option>
+                  <option value="">— {(isDoctor || form.doctorId) ? (loadingPatients ? t('loading') : t('choose')) : (lang === 'ar' ? 'اختر الدكتور أولاً' : 'Select doctor first')} —</option>
                   {patients.map((u) => (
                     <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                   ))}

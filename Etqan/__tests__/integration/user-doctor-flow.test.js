@@ -113,6 +113,15 @@ describe('User → Admin assigns doctor → Chat, Notes, Plans, Channels', () =>
     expect(res.status).toBe(200);
   });
 
+  it('2.1 ترقية المستخدم لـ Premium (مطلوب للشات والقنوات)', async () => {
+    const res = await request(app)
+      .post(`${API}/subscription/upgrade`)
+      .set(authHeader(patientToken))
+      .set('Content-Type', 'application/json')
+      .send({ durationMonths: 1 });
+    expect(res.status).toBe(200);
+  });
+
   it('3. المستخدم يدخل الشات مع الدكتور (محادثة + رسالة)', async () => {
     const convRes = await request(app)
       .get(`${API}/chat/conversations/me`)
@@ -262,6 +271,13 @@ describe('User → Admin assigns doctor → Chat, Notes, Plans, Channels', () =>
       .send(patient2Creds);
     expect(patient2Login.status).toBe(200);
     patient2Token = patient2Login.body?.data?.token ?? patient2Login.body?.token;
+
+    const upgrade2 = await request(app)
+      .post(`${API}/subscription/upgrade`)
+      .set(authHeader(patient2Token))
+      .set('Content-Type', 'application/json')
+      .send({ durationMonths: 1 });
+    expect(upgrade2.status).toBe(200);
 
     const user2Msg = await request(app)
       .post(`${API}/channels/${channelId}/messages`)

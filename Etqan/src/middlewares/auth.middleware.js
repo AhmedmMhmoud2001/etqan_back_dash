@@ -34,6 +34,30 @@ const authorize = (...roles) => (req, res, next) => {
   next();
 };
 
+/**
+ * Premium gate:
+ * - USER must have active PREMIUM subscription (endsAt null or in future)
+ * - DOCTOR/ADMIN bypass (they can access for work)
+ */
+const requirePremium = async (req, res, next) => {
+  try {
+    if (!req.user) return error(res, 'Unauthorized.', 401);
+    if (req.user.role === 'ADMIN' || req.user.role === 'DOCTOR') return next();
+    const sub = await prisma.subscription.findUnique({
+      where: { userId: req.user.id },
+      select: { plan: true, endsAt: true },
+    });
+    const now = new Date();
+    const active =
+      sub?.plan === 'PREMIUM' &&
+      (sub.endsAt == null || new Date(sub.endsAt) > now);
+    if (!active) return error(res, 'Premium required.', 403);
+    return next();
+  } catch (e) {
+    return next(e);
+  }
+};
+
 /** Optional auth: sets req.user if valid token present, does not fail if missing */
 const optionalAuth = async (req, res, next) => {
   try {
@@ -50,4 +74,4 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize, optionalAuth };
+module.exports = { authenticate, authorize, requirePremium, optionalAuth };

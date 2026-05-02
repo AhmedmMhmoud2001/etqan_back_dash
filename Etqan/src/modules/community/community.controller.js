@@ -23,6 +23,7 @@ const getPost = asyncHandler(async (req, res) => {
 
 const createPost = asyncHandler(async (req, res) => {
   const post = await communityService.createPost(req.user.id, req.body);
+  if (post && post.removed) return success(res, post, 'Removed', 200);
   success(res, post, 'Post created', 201);
 });
 
@@ -46,6 +47,7 @@ const getComments = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
   const comment = await communityService.addComment(req.params.id, req.user.id, req.body.content);
+  if (comment && comment.removed) return success(res, comment, 'Removed', 200);
   success(res, comment, 'Comment added', 201);
 });
 

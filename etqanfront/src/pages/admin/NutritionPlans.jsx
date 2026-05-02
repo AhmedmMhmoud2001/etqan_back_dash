@@ -71,6 +71,8 @@ export default function AdminNutritionPlans() {
   const { lang } = useLang();
   const t = useTranslation(lang);
   const navigate = useNavigate();
+  const me = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const isDoctor = me?.role === 'DOCTOR';
   const [plans, setPlans] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -101,16 +103,18 @@ export default function AdminNutritionPlans() {
 
   const loadPlans = async () => {
     setLoading(true);
-    const { res, data } = await get('/admin/nutrition-plans?limit=200');
+    const { res, data } = await get(isDoctor ? '/nutrition-plan/my-created' : '/admin/nutrition-plans?limit=200');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
-      const list = data.items ?? data.data?.items ?? data.data ?? [];
+      const d = data.data || data;
+      const list = isDoctor ? (d.items ?? d.plans ?? d ?? []) : (data.items ?? data.data?.items ?? data.data ?? []);
       setPlans(Array.isArray(list) ? list : []);
     } else setPlans([]);
     setLoading(false);
   };
 
   const loadDoctors = async () => {
+    if (isDoctor) return;
     const { res, data } = await get('/admin/doctors?limit=500');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
@@ -120,6 +124,17 @@ export default function AdminNutritionPlans() {
   };
 
   const loadPatientsForDoctor = async (doctorId) => {
+    if (isDoctor) {
+      setLoadingPatients(true);
+      const { res, data } = await get('/doctors/me/patients?limit=500');
+      if (res.status === 401) { navigate('/login', { replace: true }); return; }
+      if (res.ok) {
+        const d = data.data || data;
+        setPatients(d.items || d || []);
+      } else setPatients([]);
+      setLoadingPatients(false);
+      return;
+    }
     if (!doctorId) { setPatients([]); return; }
     setLoadingPatients(true);
     const { res, data } = await get(`/admin/doctors/${doctorId}/patients?limit=500`);
@@ -143,11 +158,13 @@ export default function AdminNutritionPlans() {
 
   useEffect(() => { loadPlans(); loadDoctors(); }, []);
   useEffect(() => { if (modal) loadMeals(); }, [modal]);
+  useEffect(() => { if (isDoctor) loadPatientsForDoctor('me'); }, [isDoctor]);
+  useEffect(() => { if (modal === 'create' && isDoctor) loadPatientsForDoctor('me'); }, [modal, isDoctor]);
 
   const openCreate = () => {
     const today = toLocalDateString(new Date());
     setForm({
-      doctorId: '',
+      doctorId: isDoctor ? 'me' : '',
       userId: '',
       startDate: today,
       endDate: '', // اختياري — يُحسب أسبوع من تاريخ البداية تلقائياً
@@ -158,7 +175,8 @@ export default function AdminNutritionPlans() {
       slots: [],
     });
     setSlotMealIds({});
-    setPatients([]);
+    // Don't clear doctor patients list (doctor flow relies on it).
+    if (!isDoctor) setPatients([]);
     setModal('create');
   };
 
@@ -202,14 +220,14 @@ export default function AdminNutritionPlans() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.doctorId || !form.userId || !form.startDate) {
+    if ((!isDoctor && !form.doctorId) || !form.userId || !form.startDate) {
       setError(lang === 'ar' ? 'اختر الدكتور والمريض وتاريخ البداية' : 'Select doctor, patient, and start date');
       return;
     }
     const startD = parseLocalDate(form.startDate);
     const endD = form.endDate ? parseLocalDate(form.endDate) : (() => { const d = new Date(startD); d.setDate(d.getDate() + 6); return d; })();
     const body = {
-      doctorId: form.doctorId,
+      doctorId: isDoctor ? undefined : form.doctorId,
       userId: form.userId,
       startDate: new Date(startD.getFullYear(), startD.getMonth(), startD.getDate(), 12, 0, 0).toISOString(),
       endDate: new Date(endD.getFullYear(), endD.getMonth(), endD.getDate(), 12, 0, 0).toISOString(),
@@ -356,15 +374,21 @@ export default function AdminNutritionPlans() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('doctor')}</label>
-                <select
-                  value={form.doctorId}
-                  onChange={(e) => { setForm((f) => ({ ...f, doctorId: e.target.value })); loadPatientsForDoctor(e.target.value); }}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
-                  required
-                >
-                  <option value="">— {t('choose')} {t('doctor')} —</option>
-                  {doctors.map((d) => <option key={d.id} value={d.id}>{d.user?.name ?? d.title} ({d.user?.email})</option>)}
-                </select>
+                {isDoctor ? (
+                  <div className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30 px-3 py-2 text-sm text-slate-700 dark:text-slate-200">
+                    {lang === 'ar' ? 'أنت (الدكتور الحالي)' : lang === 'it' ? 'Tu (dottore corrente)' : 'You (current doctor)'}
+                  </div>
+                ) : (
+                  <select
+                    value={form.doctorId}
+                    onChange={(e) => { setForm((f) => ({ ...f, doctorId: e.target.value })); loadPatientsForDoctor(e.target.value); }}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
+                    required
+                  >
+                    <option value="">— {t('choose')} {t('doctor')} —</option>
+                    {doctors.map((d) => <option key={d.id} value={d.id}>{d.user?.name ?? d.title} ({d.user?.email})</option>)}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('patient')}</label>
@@ -373,9 +397,9 @@ export default function AdminNutritionPlans() {
                   onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
                   required
-                  disabled={!form.doctorId || loadingPatients}
+                  disabled={(!isDoctor && !form.doctorId) || loadingPatients}
                 >
-                  <option value="">— {form.doctorId ? (loadingPatients ? t('loading') : t('choose')) : (lang === 'ar' ? 'اختر الدكتور أولاً' : 'Select doctor first')} —</option>
+                  <option value="">— {(isDoctor || form.doctorId) ? (loadingPatients ? t('loading') : t('choose')) : (lang === 'ar' ? 'اختر الدكتور أولاً' : 'Select doctor first')} —</option>
                   {patients.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
                 </select>
               </div>

@@ -1,13 +1,14 @@
 const express = require('express');
 const chatController = require('../modules/chat/chat.controller');
 const chatValidator = require('../modules/chat/chat.validator');
-const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { authenticate, authorize, requirePremium } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
 router.use(authenticate);
 router.use(authorize('USER', 'DOCTOR'));
+router.use(requirePremium);
 
 // قائمة المحادثات: للمريض = محادثة واحدة مع دكتوره، للدكتور = كل محادثاته مع المرضى
 router.get('/conversations', asyncHandler(chatController.getMyConversations));

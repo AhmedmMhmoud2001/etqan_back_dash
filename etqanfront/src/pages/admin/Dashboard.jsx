@@ -11,10 +11,52 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const me = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const isDoctor = me?.role === 'DOCTOR';
 
   useEffect(() => {
     let cancelled = false;
     const fetchDashboard = async () => {
+      if (isDoctor) {
+        const [patientsR, npR, wpR, mealsR, exR] = await Promise.all([
+          get('/doctors/me/patients?limit=1'),
+          get('/nutrition-plan/my-created'),
+          get('/workout-plan/my-created'),
+          get('/meals?limit=1'),
+          get('/exercises?limit=1'),
+        ]);
+        if (cancelled) return;
+        const any401 =
+          patientsR.res.status === 401 ||
+          npR.res.status === 401 ||
+          wpR.res.status === 401 ||
+          mealsR.res.status === 401 ||
+          exR.res.status === 401;
+        if (any401) {
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (!patientsR.res.ok || !npR.res.ok || !wpR.res.ok || !mealsR.res.ok || !exR.res.ok) {
+          setError((lang === 'ar' ? 'فشل التحميل' : 'Load failed'));
+          setLoading(false);
+          return;
+        }
+        const patients = patientsR.data?.data || patientsR.data;
+        const np = npR.data?.data || npR.data;
+        const wp = wpR.data?.data || wpR.data;
+        const meals = mealsR.data?.data || mealsR.data;
+        const ex = exR.data?.data || exR.data;
+        setStats({
+          patientsCount: patients?.total ?? (patients?.items?.length ?? 0),
+          nutritionPlansCount: (np?.plans?.length ?? np?.items?.length ?? 0),
+          workoutPlansCount: (wp?.plans?.length ?? wp?.items?.length ?? 0),
+          mealsCount: meals?.total ?? (meals?.items?.length ?? 0),
+          exercisesCount: ex?.total ?? (ex?.items?.length ?? 0),
+        });
+        setLoading(false);
+        return;
+      }
+
       const { res, data } = await get('/admin/dashboard');
       if (cancelled) return;
       if (res.status === 401) {
@@ -32,7 +74,7 @@ export default function AdminDashboard() {
     };
     fetchDashboard();
     return () => { cancelled = true; };
-  }, [navigate, lang]);
+  }, [navigate, lang, isDoctor]);
 
   if (loading) {
     return (
@@ -61,16 +103,18 @@ export default function AdminDashboard() {
     );
   }
 
-  const usersCount = stats?.usersCount ?? 0;
-  const doctorsCount = stats?.doctorsCount ?? 0;
-  const adminsCount = stats?.adminsCount ?? 0;
   const mealsCount = stats?.mealsCount ?? 0;
   const exercisesCount = stats?.exercisesCount ?? 0;
-  const channelsCount = stats?.channelsCount ?? 0;
-  const postsCount = stats?.postsCount ?? 0;
   const nutritionPlansCount = stats?.nutritionPlansCount ?? 0;
   const workoutPlansCount = stats?.workoutPlansCount ?? 0;
   const doctorNotesCount = stats?.doctorNotesCount ?? 0;
+  const patientsCount = stats?.patientsCount ?? 0;
+
+  const usersCount = stats?.usersCount ?? 0;
+  const doctorsCount = stats?.doctorsCount ?? 0;
+  const adminsCount = stats?.adminsCount ?? 0;
+  const channelsCount = stats?.channelsCount ?? 0;
+  const postsCount = stats?.postsCount ?? 0;
   const total =
     usersCount +
     doctorsCount +
@@ -83,31 +127,47 @@ export default function AdminDashboard() {
     workoutPlansCount +
     doctorNotesCount || 1;
 
-  const kpiCards = [
-    { labelKey: 'users', value: usersCount, icon: '👥', color: 'bg-blue-500', circleBg: 'bg-blue-100 dark:bg-blue-900/40', link: '/admin/users' },
-    { labelKey: 'doctors', value: doctorsCount, icon: '🩺', color: 'bg-emerald-500', circleBg: 'bg-emerald-100 dark:bg-emerald-900/40', link: '/admin/doctors' },
-    { labelKey: 'admins', value: adminsCount, icon: '⚙️', color: 'bg-amber-500', circleBg: 'bg-amber-100 dark:bg-amber-900/40', link: '/admin/users' },
-    { labelKey: 'meals', value: mealsCount, icon: '🍽️', color: 'bg-violet-500', circleBg: 'bg-violet-100 dark:bg-violet-900/40', link: '/admin/meals' },
-    { labelKey: 'exercises', value: exercisesCount, icon: '💪', color: 'bg-rose-500', circleBg: 'bg-rose-100 dark:bg-rose-900/40', link: '/admin/exercises' },
-    { labelKey: 'channels', value: channelsCount, icon: '💬', color: 'bg-sky-500', circleBg: 'bg-sky-100 dark:bg-sky-900/40', link: '/admin/channels' },
-    { labelKey: 'communityPosts', value: postsCount, icon: '📝', color: 'bg-teal-500', circleBg: 'bg-teal-100 dark:bg-teal-900/40', link: '/admin/community-posts' },
-    { labelKey: 'nutritionPlans', value: nutritionPlansCount, icon: '🥗', color: 'bg-lime-500', circleBg: 'bg-lime-100 dark:bg-lime-900/40', link: '/admin/nutrition-plans' },
-    { labelKey: 'workoutPlans', value: workoutPlansCount, icon: '📅', color: 'bg-orange-500', circleBg: 'bg-orange-100 dark:bg-orange-900/40', link: '/admin/workout-plans' },
-    { labelKey: 'doctorNotes', value: doctorNotesCount, icon: '📋', color: 'bg-indigo-500', circleBg: 'bg-indigo-100 dark:bg-indigo-900/40', link: '/admin/doctor-notes' },
-  ];
+  const kpiCards = isDoctor
+    ? [
+      { labelKey: 'patients', value: patientsCount, icon: '👥', color: 'bg-blue-500', circleBg: 'bg-blue-100 dark:bg-blue-900/40', link: '/admin/patients' },
+      { labelKey: 'meals', value: mealsCount, icon: '🍽️', color: 'bg-violet-500', circleBg: 'bg-violet-100 dark:bg-violet-900/40', link: '/admin/meals' },
+      { labelKey: 'exercises', value: exercisesCount, icon: '💪', color: 'bg-rose-500', circleBg: 'bg-rose-100 dark:bg-rose-900/40', link: '/admin/exercises' },
+      { labelKey: 'nutritionPlans', value: nutritionPlansCount, icon: '🥗', color: 'bg-lime-500', circleBg: 'bg-lime-100 dark:bg-lime-900/40', link: '/admin/nutrition-plans' },
+      { labelKey: 'workoutPlans', value: workoutPlansCount, icon: '📅', color: 'bg-orange-500', circleBg: 'bg-orange-100 dark:bg-orange-900/40', link: '/admin/workout-plans' },
+    ]
+    : [
+      { labelKey: 'users', value: usersCount, icon: '👥', color: 'bg-blue-500', circleBg: 'bg-blue-100 dark:bg-blue-900/40', link: '/admin/users' },
+      { labelKey: 'doctors', value: doctorsCount, icon: '🩺', color: 'bg-emerald-500', circleBg: 'bg-emerald-100 dark:bg-emerald-900/40', link: '/admin/doctors' },
+      { labelKey: 'admins', value: adminsCount, icon: '⚙️', color: 'bg-amber-500', circleBg: 'bg-amber-100 dark:bg-amber-900/40', link: '/admin/users' },
+      { labelKey: 'meals', value: mealsCount, icon: '🍽️', color: 'bg-violet-500', circleBg: 'bg-violet-100 dark:bg-violet-900/40', link: '/admin/meals' },
+      { labelKey: 'exercises', value: exercisesCount, icon: '💪', color: 'bg-rose-500', circleBg: 'bg-rose-100 dark:bg-rose-900/40', link: '/admin/exercises' },
+      { labelKey: 'channels', value: channelsCount, icon: '💬', color: 'bg-sky-500', circleBg: 'bg-sky-100 dark:bg-sky-900/40', link: '/admin/channels' },
+      { labelKey: 'communityPosts', value: postsCount, icon: '📝', color: 'bg-teal-500', circleBg: 'bg-teal-100 dark:bg-teal-900/40', link: '/admin/community-posts' },
+      { labelKey: 'nutritionPlans', value: nutritionPlansCount, icon: '🥗', color: 'bg-lime-500', circleBg: 'bg-lime-100 dark:bg-lime-900/40', link: '/admin/nutrition-plans' },
+      { labelKey: 'workoutPlans', value: workoutPlansCount, icon: '📅', color: 'bg-orange-500', circleBg: 'bg-orange-100 dark:bg-orange-900/40', link: '/admin/workout-plans' },
+      { labelKey: 'doctorNotes', value: doctorNotesCount, icon: '📋', color: 'bg-indigo-500', circleBg: 'bg-indigo-100 dark:bg-indigo-900/40', link: '/admin/doctor-notes' },
+    ];
 
-  const chartData = [
-    { name: t('users'), value: usersCount, fill: '#3b82f6' },
-    { name: t('doctors'), value: doctorsCount, fill: '#10b981' },
-    { name: t('admins'), value: adminsCount, fill: '#f59e0b' },
-    { name: t('meals'), value: mealsCount, fill: '#8b5cf6' },
-    { name: t('exercises'), value: exercisesCount, fill: '#f43f5e' },
-    { name: t('channels'), value: channelsCount, fill: '#0ea5e9' },
-    { name: t('communityPosts'), value: postsCount, fill: '#14b8a6' },
-    { name: t('nutritionPlans'), value: nutritionPlansCount, fill: '#84cc16' },
-    { name: t('workoutPlans'), value: workoutPlansCount, fill: '#f97316' },
-    { name: t('doctorNotes'), value: doctorNotesCount, fill: '#6366f1' },
-  ].filter((d) => d.value > 0);
+  const chartData = (isDoctor
+    ? [
+      { name: t('patients'), value: patientsCount, fill: '#3b82f6' },
+      { name: t('meals'), value: mealsCount, fill: '#8b5cf6' },
+      { name: t('exercises'), value: exercisesCount, fill: '#f43f5e' },
+      { name: t('nutritionPlans'), value: nutritionPlansCount, fill: '#84cc16' },
+      { name: t('workoutPlans'), value: workoutPlansCount, fill: '#f97316' },
+    ]
+    : [
+      { name: t('users'), value: usersCount, fill: '#3b82f6' },
+      { name: t('doctors'), value: doctorsCount, fill: '#10b981' },
+      { name: t('admins'), value: adminsCount, fill: '#f59e0b' },
+      { name: t('meals'), value: mealsCount, fill: '#8b5cf6' },
+      { name: t('exercises'), value: exercisesCount, fill: '#f43f5e' },
+      { name: t('channels'), value: channelsCount, fill: '#0ea5e9' },
+      { name: t('communityPosts'), value: postsCount, fill: '#14b8a6' },
+      { name: t('nutritionPlans'), value: nutritionPlansCount, fill: '#84cc16' },
+      { name: t('workoutPlans'), value: workoutPlansCount, fill: '#f97316' },
+      { name: t('doctorNotes'), value: doctorNotesCount, fill: '#6366f1' },
+    ]).filter((d) => d.value > 0);
 
   const maxBar = Math.max(...chartData.map((d) => d.value), 1);
 

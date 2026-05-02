@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LangContext';
 import { useTranslation } from '../translations';
 import { useSocket } from '../context/SocketContext';
-import { get } from '../api';
+import { get, resolveMediaUrl } from '../api';
 
 // أيقونات السايدبار (SVG) — حجم موحد للقائمة
 const iconClass = 'w-5 h-5 shrink-0';
@@ -35,6 +35,31 @@ const IconChannels = () => (
 const IconDoctorNotes = () => (
   <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 );
+const IconSubscriptions = () => (
+  <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-3.314 0-6 1.79-6 4s2.686 4 6 4 6-1.79 6-4-2.686-4-6-4z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12v4c0 2.21 2.686 4 6 4s6-1.79 6-4v-4" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12c0 2.21 2.686 4 6 4s6-1.79 6-4" />
+  </svg>
+);
+const IconPackages = () => (
+  <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8l8-4 8 4-8 4-8-4z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12v10" />
+  </svg>
+);
+const IconReferrals = () => (
+  <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 010 5.656M10.172 13.828a4 4 0 010-5.656M8.343 15.657l-1.414 1.414a3 3 0 004.243 4.243l1.414-1.414M15.657 8.343l1.414-1.414a3 3 0 00-4.243-4.243L11.414 4.1" />
+  </svg>
+);
+const IconBanners = () => (
+  <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 18h16M6 6v12M18 6v12" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9h8M8 12h6M8 15h7" />
+  </svg>
+);
 const IconCommunityPosts = () => (
   <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
 );
@@ -48,20 +73,33 @@ const IconLogout = () => (
   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
 );
 
-const navItems = [
-  { to: '/admin/dashboard', labelKey: 'dashboard', Icon: IconDashboard },
-  { to: '/admin/users', labelKey: 'users', Icon: IconUsers },
-  { to: '/admin/doctors', labelKey: 'doctors', Icon: IconDoctors },
-  { to: '/admin/meals', labelKey: 'meals', Icon: IconMeals },
-  { to: '/admin/exercises', labelKey: 'exercises', Icon: IconExercises },
-  { to: '/admin/nutrition-plans', labelKey: 'nutritionPlans', Icon: IconNutritionPlans },
-  { to: '/admin/workout-plans', labelKey: 'workoutPlans', Icon: IconWorkoutPlans },
-  { to: '/admin/channels', labelKey: 'channels', Icon: IconChannels },
-  { to: '/admin/doctor-notes', labelKey: 'doctorNotes', Icon: IconDoctorNotes },
-  { to: '/admin/community-posts', labelKey: 'communityPosts', Icon: IconCommunityPosts },
-  { to: '/admin/notifications', labelKey: 'notifications', Icon: IconBell },
-  { to: '/admin/profile', labelKey: 'profile', Icon: IconProfile },
-];
+const navItems = (role) => {
+  const base = [
+    { to: '/admin/dashboard', labelKey: 'dashboard', Icon: IconDashboard },
+    { to: '/admin/meals', labelKey: 'meals', Icon: IconMeals },
+    { to: '/admin/exercises', labelKey: 'exercises', Icon: IconExercises },
+    { to: '/admin/nutrition-plans', labelKey: 'nutritionPlans', Icon: IconNutritionPlans },
+    { to: '/admin/workout-plans', labelKey: 'workoutPlans', Icon: IconWorkoutPlans },
+    { to: '/admin/channels', labelKey: 'channels', Icon: IconChannels },
+    { to: '/admin/doctor-notes', labelKey: 'doctorNotes', Icon: IconDoctorNotes },
+    { to: '/admin/community-posts', labelKey: 'communityPosts', Icon: IconCommunityPosts },
+    { to: '/admin/notifications', labelKey: 'notifications', Icon: IconBell },
+    { to: '/admin/profile', labelKey: 'profile', Icon: IconProfile },
+  ];
+  if (role === 'DOCTOR') {
+    return base;
+  }
+  // ADMIN
+  return [
+    { to: '/admin/users', labelKey: 'users', Icon: IconUsers },
+    { to: '/admin/doctors', labelKey: 'doctors', Icon: IconDoctors },
+    { to: '/admin/referrals', labelKey: 'referrals', Icon: IconReferrals },
+    { to: '/admin/banners', labelKey: 'banners', Icon: IconBanners },
+    { to: '/admin/packages', labelKey: 'packages', Icon: IconPackages },
+    { to: '/admin/subscriptions', labelKey: 'subscriptions', Icon: IconSubscriptions },
+    ...base,
+  ];
+};
 
 // أيقونات الهيدر (SVG)
 const IconSun = () => (
@@ -127,7 +165,20 @@ export default function AdminLayout() {
   };
 
   const toggleTheme = () => setDarkMode((v) => !v);
-  const toggleLang = () => setLang((l) => (l === 'ar' ? 'en' : 'ar'));
+  const toggleLang = () =>
+    setLang((l) => {
+      const langs = ['ar', 'en', 'it'];
+      const idx = langs.indexOf(l);
+      return langs[(idx + 1) % langs.length] ?? 'ar';
+    });
+
+  const nextLang = (() => {
+    const langs = ['ar', 'en', 'it'];
+    const idx = langs.indexOf(lang);
+    return langs[(idx + 1) % langs.length] ?? 'ar';
+  })();
+  const langLabelKey = (l) =>
+    l === 'ar' ? 'languageArabic' : l === 'it' ? 'languageItalian' : 'languageEnglish';
 
   const user = (() => {
     try {
@@ -136,6 +187,7 @@ export default function AdminLayout() {
       return {};
     }
   })();
+  const role = user?.role || '';
   const userInitial = (user.name || user.email || '?').charAt(0).toUpperCase();
 
   return (
@@ -161,7 +213,7 @@ export default function AdminLayout() {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto py-2 scrollbar-hide">
-          {navItems.map((item) => (
+          {navItems(role).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -209,8 +261,8 @@ export default function AdminLayout() {
               type="button"
               onClick={toggleLang}
               className="p-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              title={lang === 'ar' ? 'English' : 'العربية'}
-              aria-label={lang === 'ar' ? t('switchToEnglish') : t('switchToArabic')}
+              title={`${t('switchLanguage')}: ${t(langLabelKey(nextLang))}`}
+              aria-label={`${t('switchLanguage')}: ${t(langLabelKey(nextLang))}`}
             >
               <IconLang />
             </button>
@@ -250,7 +302,7 @@ export default function AdminLayout() {
             >
               {user.avatarUrl || user.imageUrl ? (
                 <img
-                  src={user.avatarUrl || user.imageUrl}
+                  src={resolveMediaUrl(user.avatarUrl || user.imageUrl)}
                   alt=""
                   className="w-9 h-9 rounded-full object-cover"
                 />

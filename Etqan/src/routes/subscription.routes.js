@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/my', asyncHandler(subscriptionController.getMy));
+router.get('/packages', asyncHandler(subscriptionController.listPackages));
 router.post('/upgrade', asyncHandler(subscriptionController.upgrade));
 router.post('/apply-discount', asyncHandler(subscriptionController.applyDiscount));
 

@@ -5,8 +5,10 @@ const channelIdParam = () => [param('id').trim().notEmpty().withMessage('Channel
 const createChannelRules = () => [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 200 }),
   body('nameAr').optional().trim().isLength({ max: 200 }),
+  body('nameIt').optional().trim().isLength({ max: 200 }),
   body('description').optional().trim().isLength({ max: 2000 }),
   body('descriptionAr').optional().trim().isLength({ max: 2000 }),
+  body('descriptionIt').optional().trim().isLength({ max: 2000 }),
   body('icon').optional().trim().isLength({ max: 20 }),
 ];
 
@@ -14,8 +16,10 @@ const updateChannelRules = () => [
   param('id').trim().notEmpty().withMessage('Channel id is required'),
   body('name').optional().trim().isLength({ max: 200 }),
   body('nameAr').optional().trim().isLength({ max: 200 }),
+  body('nameIt').optional().trim().isLength({ max: 200 }),
   body('description').optional().trim().isLength({ max: 2000 }),
   body('descriptionAr').optional().trim().isLength({ max: 2000 }),
+  body('descriptionIt').optional().trim().isLength({ max: 2000 }),
   body('icon').optional().trim().isLength({ max: 20 }),
   body('isActive').optional().isBoolean(),
 ];

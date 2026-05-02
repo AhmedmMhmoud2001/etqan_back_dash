@@ -1,6 +1,8 @@
 const express = require('express');
 const measurementController = require('../modules/measurements/measurement.controller');
 const measurementValidator = require('../modules/measurements/measurement.validator');
+const baselineGoalController = require('../modules/measurements/baselineGoal.controller');
+const baselineGoalValidator = require('../modules/measurements/baselineGoal.validator');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -20,6 +22,29 @@ router.get(
   measurementValidator.validate,
   asyncHandler(measurementController.getProgress)
 );
+
+// Start (Baseline) CRUD (self)
+router.get('/baseline', asyncHandler(baselineGoalController.getBaseline));
+router.put(
+  '/baseline',
+  baselineGoalValidator.upsertRules(),
+  baselineGoalValidator.validate,
+  asyncHandler(baselineGoalController.upsertBaseline)
+);
+router.delete('/baseline', asyncHandler(baselineGoalController.deleteBaseline));
+
+// Goal CRUD (self)
+router.get('/goal', asyncHandler(baselineGoalController.getGoal));
+router.put(
+  '/goal',
+  baselineGoalValidator.upsertRules(),
+  baselineGoalValidator.validate,
+  asyncHandler(baselineGoalController.upsertGoal)
+);
+router.delete('/goal', asyncHandler(baselineGoalController.deleteGoal));
+
+// Summary based on baseline + latest measurement + goal
+router.get('/progress/summary', asyncHandler(baselineGoalController.getSummary));
 router.get(
   '/',
   measurementValidator.listRules(),

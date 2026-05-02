@@ -24,6 +24,7 @@ const getChannelMessages = asyncHandler(async (req, res) => {
 
 const sendMessage = asyncHandler(async (req, res) => {
   const msg = await channelService.sendMessage(req.params.id, req.user.id, req.body);
+  if (msg && msg.removed) return success(res, msg, 'Removed', 200);
   success(res, msg, 'Message sent', 201);
 });
 

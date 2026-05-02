@@ -13,6 +13,12 @@ const getLatestForMe = asyncHandler(async (req, res) => {
 });
 
 const listMyNotes = asyncHandler(async (req, res) => {
+  // Doctor: list notes for all my patients. User: list my own notes.
+  if (req.user.role === 'DOCTOR') {
+    const list = await doctorNoteService.listForMyPatients(req.user);
+    success(res, { notes: list }, 'My patients doctor notes');
+    return;
+  }
   const list = await doctorNoteService.listForPatient(req.user.id, req.user);
   success(res, { notes: list }, 'My doctor notes');
 });

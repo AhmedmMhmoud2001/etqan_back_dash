@@ -1,8 +1,24 @@
 /**
  * مساعد طلبات API للوحة الأدمن
  * كل الطلبات تحتاج توكن في الهيدر؛ في حالة 401 يتم التوجيه من الصفحة نفسها.
+ *
+ * ضبط الإنتاج: أنشئ `etqanfront/.env.production` وفيه:
+ *   VITE_BACKEND_URL=https://etqan.nodeteam.site
+ * بدون سلاش أخيرة. فارغاً = طلب نسبي `/api` مع proxy في `npm run dev`.
  */
-const API_BASE = '/api';
+const BACKEND_ORIGIN = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
+export const API_BASE = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/api` : '/api';
+
+/** رابط وسائط نسبية مثل `/uploads/...` يُكمَّل أمام BACKEND المنشور */
+export function resolveMediaUrl(url) {
+  if (url == null || typeof url !== 'string') return url;
+  const u = url.trim();
+  if (!u) return u;
+  if (/^(https?:|data:|blob:)/i.test(u)) return u;
+  const path = u.startsWith('/') ? u : `/${u}`;
+  if (BACKEND_ORIGIN) return `${BACKEND_ORIGIN}${path}`;
+  return path;
+}
 
 export function getToken() {
   return localStorage.getItem('token');
@@ -68,5 +84,3 @@ export async function uploadImage(file) {
   const uploadedUrl = data.data?.url;
   return { res, data, url: uploadedUrl };
 }
-
-export { API_BASE };

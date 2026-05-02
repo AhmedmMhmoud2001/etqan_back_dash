@@ -53,7 +53,12 @@ const countReferredUsers = async (referrerId) => {
 const listReferredUsers = async (referrerId, limit = 50) => {
   return prisma.user.findMany({
     where: { referredById: referrerId },
-    select: { id: true, name: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      subscription: { select: { plan: true, endsAt: true } },
+    },
     orderBy: { createdAt: 'desc' },
     take: limit,
   });

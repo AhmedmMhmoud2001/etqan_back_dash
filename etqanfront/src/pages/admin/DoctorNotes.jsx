@@ -10,6 +10,8 @@ export default function AdminDoctorNotes() {
   const { lang } = useLang();
   const t = useTranslation(lang);
   const navigate = useNavigate();
+  const me = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const isDoctor = me?.role === 'DOCTOR';
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -19,12 +21,12 @@ export default function AdminDoctorNotes() {
   const [loading, setLoading] = useState(true);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [error, setError] = useState('');
-  const [formContent, setFormContent] = useState('');
-  const [selectedPatientForAdd, setSelectedPatientForAdd] = useState('');
-  const [selectedDoctorForAdd, setSelectedDoctorForAdd] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [newNotePatientId, setNewNotePatientId] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadDoctors = async () => {
+    if (isDoctor) return;
     const { res, data } = await get('/admin/doctors?limit=500');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
@@ -34,7 +36,7 @@ export default function AdminDoctorNotes() {
   };
 
   const loadPatients = async () => {
-    const { res, data } = await get('/admin/users?limit=500&role=USER');
+    const { res, data } = await get(isDoctor ? '/doctors/me/patients?limit=500' : '/admin/users?limit=500&role=USER');
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (res.ok) {
       const d = data.data || data;
@@ -45,9 +47,13 @@ export default function AdminDoctorNotes() {
   const loadNotes = async () => {
     setLoadingNotes(true);
     setError('');
-    let url = '/admin/doctor-notes?limit=300';
-    if (filterDoctorId) url += `&doctorId=${encodeURIComponent(filterDoctorId)}`;
-    if (filterPatientId) url += `&patientId=${encodeURIComponent(filterPatientId)}`;
+    let url = isDoctor ? '/doctor-notes/my' : '/admin/doctor-notes?limit=300';
+    if (!isDoctor) {
+      if (filterDoctorId) url += `&doctorId=${encodeURIComponent(filterDoctorId)}`;
+      if (filterPatientId) url += `&patientId=${encodeURIComponent(filterPatientId)}`;
+    } else if (filterPatientId) {
+      url = `/doctor-notes/patient/${encodeURIComponent(filterPatientId)}`;
+    }
     const { res, data } = await get(url);
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (!res.ok) {
@@ -71,34 +77,43 @@ export default function AdminDoctorNotes() {
 
   useEffect(() => {
     loadNotes();
-  }, [filterDoctorId, filterPatientId]);
+  }, [filterDoctorId, filterPatientId, isDoctor]);
 
-  const handleCreateNote = async (e) => {
-    e.preventDefault();
-    if (!selectedPatientForAdd || !formContent.trim()) return;
-    setSubmitting(true);
-    setError('');
-    const body = { patientId: selectedPatientForAdd, content: formContent.trim() };
-    if (selectedDoctorForAdd) body.doctorId = selectedDoctorForAdd;
-    const { res, data } = await post('/doctor-notes', body);
-    if (res.status === 401) { navigate('/login', { replace: true }); return; }
-    if (!res.ok) {
-      setError(data.message || 'Failed to add note');
-      setSubmitting(false);
-      return;
+  useEffect(() => {
+    if (!isDoctor) return;
+    if (!newNotePatientId && patients.length > 0) {
+      setNewNotePatientId(String(patients[0].id));
     }
-    setFormContent('');
-    setSelectedPatientForAdd('');
-    setSelectedDoctorForAdd('');
-    setSubmitting(false);
-    loadNotes();
-  };
+  }, [isDoctor, patients, newNotePatientId]);
 
   const contentPreview = (text) => {
     if (!text) return '—';
     const s = String(text).trim();
     if (s.length <= CONTENT_PREVIEW_LENGTH) return s;
     return s.slice(0, CONTENT_PREVIEW_LENGTH) + (lang === 'ar' ? '…' : '…');
+  };
+
+  const handleCreateNote = async (e) => {
+    e.preventDefault();
+    if (!isDoctor) return;
+    setError('');
+    if (!newNotePatientId || !String(newNoteContent || '').trim()) {
+      setError(lang === 'ar' ? 'اختر المريض واكتب المحتوى' : lang === 'it' ? 'Seleziona il paziente e scrivi il contenuto' : 'Select patient and write content');
+      return;
+    }
+    setSaving(true);
+    const { res, data } = await post('/doctor-notes', {
+      patientId: newNotePatientId,
+      content: String(newNoteContent || '').trim(),
+    });
+    setSaving(false);
+    if (res.status === 401) { navigate('/login', { replace: true }); return; }
+    if (!res.ok) {
+      setError(data.message || t('saveError') || 'Failed');
+      return;
+    }
+    setNewNoteContent('');
+    loadNotes();
   };
 
   return (
@@ -110,21 +125,66 @@ export default function AdminDoctorNotes() {
 
       {error && <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm">{error}</div>}
 
+      {/* إنشاء ملاحظة (للدكتور فقط) */}
+      {isDoctor && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm p-4 mb-6">
+          <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">
+            {lang === 'ar' ? 'إضافة ملاحظة للمريض' : lang === 'it' ? 'Aggiungi nota al paziente' : 'Add note to patient'}
+          </h2>
+          <form onSubmit={handleCreateNote} className="grid gap-3 md:grid-cols-3 items-start">
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('patient')}</label>
+              <select
+                value={newNotePatientId}
+                onChange={(e) => setNewNotePatientId(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
+                required
+              >
+                {patients.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'ar' ? 'المحتوى' : lang === 'it' ? 'Contenuto' : 'Content'}</label>
+              <textarea
+                value={newNoteContent}
+                onChange={(e) => setNewNoteContent(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
+                placeholder={lang === 'ar' ? 'اكتب الملاحظة...' : lang === 'it' ? 'Scrivi la nota...' : 'Write a note...'}
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-60"
+                >
+                  {saving ? t('loading') : t('save')}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* فلاتر: الدكتور — المستخدم */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('doctor')}:</label>
-          <select
-            value={filterDoctorId}
-            onChange={(e) => setFilterDoctorId(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[200px]"
-          >
-            <option value="">— {lang === 'ar' ? 'كل الأطباء' : 'All doctors'} —</option>
-            {doctors.map((d) => (
-              <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
-            ))}
-          </select>
-        </div>
+        {!isDoctor && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('doctor')}:</label>
+            <select
+              value={filterDoctorId}
+              onChange={(e) => setFilterDoctorId(e.target.value)}
+              className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[200px]"
+            >
+              <option value="">— {lang === 'ar' ? 'كل الأطباء' : 'All doctors'} —</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('patient')}:</label>
           <select
@@ -132,7 +192,7 @@ export default function AdminDoctorNotes() {
             onChange={(e) => setFilterPatientId(e.target.value)}
             className="rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-w-[200px]"
           >
-            <option value="">— {lang === 'ar' ? 'كل المستخدمين' : 'All users'} —</option>
+            <option value="">— {lang === 'ar' ? (isDoctor ? 'كل المرضى' : 'كل المستخدمين') : (isDoctor ? (lang === 'it' ? 'Tutti i pazienti' : 'All patients') : 'All users')} —</option>
             {patients.map((u) => (
               <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
             ))}
@@ -185,53 +245,6 @@ export default function AdminDoctorNotes() {
             </table>
           </div>
         )}
-      </div>
-
-      {/* إضافة ملاحظة جديدة */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 p-4">
-        <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">{lang === 'ar' ? 'إضافة ملاحظة جديدة' : 'Add new note'}</h2>
-        <form onSubmit={handleCreateNote} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('doctor')} {lang === 'ar' ? '(اختياري — إن لم تختر يُستخدم دكتور المريض)' : '(optional — uses patient\'s doctor if not set)'}</label>
-            <select
-              value={selectedDoctorForAdd}
-              onChange={(e) => setSelectedDoctorForAdd(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
-            >
-              <option value="">— {lang === 'ar' ? 'دكتور المريض' : 'Patient\'s doctor'} —</option>
-              {doctors.map((d) => (
-                <option key={d.id} value={d.id}>{d.user?.name || d.title} ({d.user?.email})</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('patient')}</label>
-            <select
-              value={selectedPatientForAdd}
-              onChange={(e) => setSelectedPatientForAdd(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2"
-              required
-            >
-              <option value="">— {t('choose')} —</option>
-              {patients.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('content')}</label>
-            <textarea
-              value={formContent}
-              onChange={(e) => setFormContent(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2 min-h-[80px]"
-              placeholder={t('content')}
-              required
-            />
-          </div>
-          <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">
-            {submitting ? t('saving') : t('add')}
-          </button>
-        </form>
       </div>
     </div>
   );

@@ -17,7 +17,10 @@ const createAndSend = async (userId, email, type = OTP_TYPE_EMAIL_VERIFICATION) 
     type,
     expiresAt,
   });
-  await sendOtpEmail(email, code, type);
+  // In tests we don't send emails.
+  if (process.env.NODE_ENV !== 'test') {
+    await sendOtpEmail(email, code, type);
+  }
   return { expiresInMinutes: config.otp.expiryMinutes };
 };
 

@@ -17,7 +17,7 @@ export default function AdminChannels() {
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name: '', nameAr: '', description: '', descriptionAr: '', icon: '' });
+  const [form, setForm] = useState({ name: '', nameAr: '', nameIt: '', description: '', descriptionAr: '', descriptionIt: '', icon: '' });
 
   const loadChannels = async () => {
     setLoading(true);
@@ -43,21 +43,37 @@ export default function AdminChannels() {
   }, [page]);
 
   const openCreate = () => {
-    setForm({ name: '', nameAr: '', description: '', descriptionAr: '', icon: '' });
+    setForm({ name: '', nameAr: '', nameIt: '', description: '', descriptionAr: '', descriptionIt: '', icon: '' });
     setSelected(null);
     setModal('create');
   };
 
   const openEdit = (ch) => {
     setSelected(ch);
-    setForm({ name: ch.name || '', nameAr: ch.nameAr || '', description: ch.description || '', descriptionAr: ch.descriptionAr || '', icon: ch.icon || '' });
+    setForm({
+      name: ch.name || '',
+      nameAr: ch.nameAr || '',
+      nameIt: ch.nameIt || '',
+      description: ch.description || '',
+      descriptionAr: ch.descriptionAr || '',
+      descriptionIt: ch.descriptionIt || '',
+      icon: ch.icon || '',
+    });
     setModal('edit');
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!form.name) return;
-    const { res, data } = await post('/admin/channels', { name: form.name, description: form.description || undefined, icon: form.icon || undefined });
+    const { res, data } = await post('/admin/channels', {
+      name: form.name,
+      nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
+      description: form.description || undefined,
+      descriptionAr: form.descriptionAr || undefined,
+      descriptionIt: form.descriptionIt || undefined,
+      icon: form.icon || undefined,
+    });
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (!res.ok) { setError(data.message || 'Failed'); return; }
     setModal(null);
@@ -67,7 +83,15 @@ export default function AdminChannels() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selected) return;
-    const { res, data } = await patch(`/admin/channels/${selected.id}`, { name: form.name, nameAr: form.nameAr || undefined, description: form.description || undefined, descriptionAr: form.descriptionAr || undefined, icon: form.icon || undefined });
+    const { res, data } = await patch(`/admin/channels/${selected.id}`, {
+      name: form.name,
+      nameAr: form.nameAr || undefined,
+      nameIt: form.nameIt || undefined,
+      description: form.description || undefined,
+      descriptionAr: form.descriptionAr || undefined,
+      descriptionIt: form.descriptionIt || undefined,
+      icon: form.icon || undefined,
+    });
     if (res.status === 401) { navigate('/login', { replace: true }); return; }
     if (!res.ok) { setError(data.message || 'Failed'); return; }
     setModal(null);
@@ -107,8 +131,12 @@ export default function AdminChannels() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
                 {items.map((ch) => (
                   <tr key={ch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">{ch.name}</td>
-                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-md truncate">{ch.description || '—'}</td>
+                    <td className="px-4 py-3 text-start text-slate-800 dark:text-slate-200">
+                      {lang === 'ar' ? (ch.nameAr || ch.nameIt || ch.name) : lang === 'it' ? (ch.nameIt || ch.name || ch.nameAr) : (ch.name || ch.nameAr || ch.nameIt)}
+                    </td>
+                    <td className="px-4 py-3 text-start text-slate-600 dark:text-slate-300 max-w-md truncate">
+                      {lang === 'ar' ? (ch.descriptionAr || ch.descriptionIt || ch.description || '—') : lang === 'it' ? (ch.descriptionIt || ch.description || ch.descriptionAr || '—') : (ch.description || ch.descriptionAr || ch.descriptionIt || '—')}
+                    </td>
                     <td className="px-4 py-3 text-start">
                       <div className="flex gap-1 justify-end items-center">
                         <button type="button" onClick={() => openEdit(ch)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
@@ -139,8 +167,10 @@ export default function AdminChannels() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameEn')}</label><input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required placeholder="e.g. Fitness Tips" /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameAr')}</label><input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="مثل: نصائح لياقة" dir="rtl" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label><input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" placeholder="es. Consigli fitness" /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('channelDescription')} (EN)</label><textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionAr')}</label><textarea value={form.descriptionAr} onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label><textarea value={form.descriptionIt} onChange={(e) => setForm((f) => ({ ...f, descriptionIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} /></div>
               <div className="flex gap-2 justify-end pt-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button><button type="submit" className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">{t('save')}</button></div>
             </form>
           </div>
@@ -153,8 +183,10 @@ export default function AdminChannels() {
             <form onSubmit={handleUpdate} className="space-y-4">
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameEn')}</label><input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" required /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameAr')}</label><input type="text" value={form.nameAr} onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" dir="rtl" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('nameIt')}</label><input type="text" value={form.nameIt} onChange={(e) => setForm((f) => ({ ...f, nameIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('channelDescription')} (EN)</label><textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} /></div>
               <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionAr')}</label><textarea value={form.descriptionAr} onChange={(e) => setForm((f) => ({ ...f, descriptionAr: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} dir="rtl" /></div>
+              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('descriptionIt')}</label><textarea value={form.descriptionIt} onChange={(e) => setForm((f) => ({ ...f, descriptionIt: e.target.value }))} className="w-full rounded-lg border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700 px-3 py-2" rows={2} /></div>
               <div className="flex gap-2 justify-end pt-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">{t('cancel')}</button><button type="submit" className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">{t('save')}</button></div>
             </form>
           </div>

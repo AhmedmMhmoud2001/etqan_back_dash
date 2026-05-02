@@ -34,6 +34,7 @@ const swaggerDocument = {
     { name: 'Measurements', description: 'قياسات الجسم (وزن، دهون، عضلات، ماء، خصر) — Progress / Add Measurement' },
     { name: 'Referrals', description: 'الإحالات: كود المستخدم، عدد الأصدقاء، الخصم المكتسب' },
     { name: 'Subscription', description: 'Premium: حالة الاشتراك، ترقية، تطبيق خصم الإحالة' },
+    { name: 'Banners', description: 'Banners: public list + admin CRUD' },
     { name: 'Grocery', description: 'قائمة البقالة (Grocery List)' },
     { name: 'Doctor Notes', description: 'ملاحظة/مراجعة من الدكتور للمريض (Note from your Doctor)' },
     { name: 'Dashboard', description: 'الصفحة الرئيسية: مقاييس، التزام، هدف، ملخص اليوم، ملاحظة الدكتور' },
@@ -347,6 +348,15 @@ const swaggerDocument = {
                   email: { type: 'string', format: 'email' },
                   password: { type: 'string', minLength: 8 },
                   emailVerified: { type: 'boolean', default: true },
+                  title: { type: 'string' },
+                  titleAr: { type: 'string' },
+                  titleIt: { type: 'string' },
+                  specialization: { type: 'string' },
+                  specializationAr: { type: 'string' },
+                  specializationIt: { type: 'string' },
+                  bio: { type: 'string' },
+                  bioAr: { type: 'string' },
+                  bioIt: { type: 'string' },
                 },
               },
             },
@@ -491,6 +501,15 @@ const swaggerDocument = {
                   email: { type: 'string', format: 'email' },
                   password: { type: 'string', minLength: 8 },
                   isActive: { type: 'boolean' },
+                  title: { type: 'string' },
+                  titleAr: { type: 'string' },
+                  titleIt: { type: 'string' },
+                  specialization: { type: 'string' },
+                  specializationAr: { type: 'string' },
+                  specializationIt: { type: 'string' },
+                  bio: { type: 'string' },
+                  bioAr: { type: 'string' },
+                  bioIt: { type: 'string' },
                 },
               },
             },
@@ -775,7 +794,11 @@ const swaggerDocument = {
                 required: ['name'],
                 properties: {
                   name: { type: 'string' },
+                  nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   description: { type: 'string' },
+                  descriptionAr: { type: 'string' },
+                  descriptionIt: { type: 'string' },
                   icon: { type: 'string', description: 'e.g. emoji 💪' },
                 },
               },
@@ -798,7 +821,11 @@ const swaggerDocument = {
                 type: 'object',
                 properties: {
                   name: { type: 'string' },
+                  nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   description: { type: 'string' },
+                  descriptionAr: { type: 'string' },
+                  descriptionIt: { type: 'string' },
                   icon: { type: 'string' },
                   isActive: { type: 'boolean' },
                 },
@@ -814,6 +841,189 @@ const swaggerDocument = {
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Channel deleted' }, 403: { description: 'Admin only' }, 404: { description: 'Not found' } },
+      },
+    },
+
+    // ——— Admin: Packages & Subscriptions ———
+    '/admin/packages': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List subscription packages (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer' } },
+          { name: 'activeOnly', in: 'query', schema: { type: 'boolean' } },
+        ],
+        responses: { 200: { description: 'items, total' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+      post: {
+        tags: ['Admin'],
+        summary: 'Create subscription package (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'durationMonths', 'listPrice', 'payPrice'],
+                properties: {
+                  name: { type: 'string' },
+                  durationMonths: { type: 'integer', enum: [1, 3, 6, 12] },
+                  listPrice: { type: 'string', example: '199.00' },
+                  payPrice: { type: 'string', example: '199.00' },
+                  currency: { type: 'string', example: 'EGP' },
+                  isActive: { type: 'boolean', default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Created' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+    },
+    '/admin/packages/{id}': {
+      patch: {
+        tags: ['Admin'],
+        summary: 'Update subscription package (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { content: { 'application/json': { schema: { type: 'object' } } } },
+        responses: { 200: { description: 'Updated' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+    },
+    '/admin/subscriptions/{userId}/assign-package': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Assign/renew package for user (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['packageId'], properties: { packageId: { type: 'string' } } } } } },
+        responses: { 200: { description: 'Updated subscription' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+    },
+    '/admin/referrals/settings': {
+      get: {
+        tags: ['Admin', 'Referrals'],
+        summary: 'Get referral discount settings (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'discountPercentPerReferral, maxDiscountPercent' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+      patch: {
+        tags: ['Admin', 'Referrals'],
+        summary: 'Update referral discount settings (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  discountPercentPerReferral: { type: 'integer', example: 10 },
+                  maxDiscountPercent: { type: 'integer', example: 50 },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Updated settings' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+    },
+
+    // ——— Banners ———
+    '/banners': {
+      get: {
+        tags: ['Banners'],
+        summary: 'List active banners (public)',
+        security: [],
+        responses: {
+          200: {
+            description: 'items[]',
+          },
+        },
+      },
+    },
+    '/banners/admin': {
+      get: {
+        tags: ['Admin', 'Banners'],
+        summary: 'List banners (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+        ],
+        responses: { 200: { description: 'items, total, page, limit' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+      post: {
+        tags: ['Admin', 'Banners'],
+        summary: 'Create banner (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['imageUrl'],
+                properties: {
+                  title: { type: 'string', nullable: true },
+                  titleAr: { type: 'string', nullable: true },
+                  titleIt: { type: 'string', nullable: true },
+                  description: { type: 'string', nullable: true },
+                  descriptionAr: { type: 'string', nullable: true },
+                  descriptionIt: { type: 'string', nullable: true },
+                  imageUrl: { type: 'string', example: '/uploads/banner.jpg' },
+                  link: { type: 'string', nullable: true },
+                  order: { type: 'integer', default: 0 },
+                  isActive: { type: 'boolean', default: true },
+                  startsAt: { type: 'string', format: 'date-time', nullable: true },
+                  endsAt: { type: 'string', format: 'date-time', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: { 201: { description: 'Created' }, 400: { description: 'Validation error' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' } },
+      },
+    },
+    '/banners/admin/{id}': {
+      patch: {
+        tags: ['Admin', 'Banners'],
+        summary: 'Update banner (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', nullable: true },
+                  titleAr: { type: 'string', nullable: true },
+                  titleIt: { type: 'string', nullable: true },
+                  description: { type: 'string', nullable: true },
+                  descriptionAr: { type: 'string', nullable: true },
+                  descriptionIt: { type: 'string', nullable: true },
+                  imageUrl: { type: 'string' },
+                  link: { type: 'string', nullable: true },
+                  order: { type: 'integer' },
+                  isActive: { type: 'boolean' },
+                  startsAt: { type: 'string', format: 'date-time', nullable: true },
+                  endsAt: { type: 'string', format: 'date-time', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Updated' }, 400: { description: 'Validation error' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' }, 404: { description: 'Not found' } },
+      },
+      delete: {
+        tags: ['Admin', 'Banners'],
+        summary: 'Delete banner (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Deleted' }, 401: { description: 'Unauthorized' }, 403: { description: 'Admin only' }, 404: { description: 'Not found' } },
       },
     },
 
@@ -843,6 +1053,8 @@ const swaggerDocument = {
                 required: ['name', 'mealType', 'prepTimeMinutes', 'calories', 'proteinG', 'carbsG', 'fatsG'],
                 properties: {
                   name: { type: 'string' },
+                  nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   imageUrl: { type: 'string', format: 'uri' },
                   mealType: { type: 'string', enum: ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'] },
                   prepTimeMinutes: { type: 'integer' },
@@ -979,6 +1191,8 @@ const swaggerDocument = {
                 type: 'object',
                 properties: {
                   name: { type: 'string' },
+                  nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   imageUrl: { type: 'string', format: 'uri' },
                   mealType: { type: 'string', enum: ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'] },
                   prepTimeMinutes: { type: 'integer' },
@@ -1178,18 +1392,21 @@ const swaggerDocument = {
                 properties: {
                   name: { type: 'string' },
                   nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   imageUrl: { type: 'string', description: 'URL or path e.g. /uploads/xxx.jpg' },
                   description: { type: 'string' },
                   descriptionAr: { type: 'string' },
+                  descriptionIt: { type: 'string' },
                   targetMuscles: { type: 'array', items: { type: 'string' } },
                   equipmentNeeded: {
                     type: 'array',
-                    description: 'متطلبات التمرين (المعدات) — كل عنصر: name (إنجليزي), nameAr (عربي)',
+                    description: 'متطلبات التمرين (المعدات) — كل عنصر: name (EN), nameAr (AR), nameIt (IT)',
                     items: {
                       type: 'object',
                       properties: {
                         name: { type: 'string', example: 'Dumbbells' },
                         nameAr: { type: 'string', example: 'دمبل' },
+                        nameIt: { type: 'string', example: 'Manubri' },
                       },
                     },
                   },
@@ -1222,18 +1439,21 @@ const swaggerDocument = {
                 properties: {
                   name: { type: 'string' },
                   nameAr: { type: 'string' },
+                  nameIt: { type: 'string' },
                   imageUrl: { type: 'string', description: 'URL or path e.g. /uploads/xxx.jpg' },
                   description: { type: 'string' },
                   descriptionAr: { type: 'string' },
+                  descriptionIt: { type: 'string' },
                   targetMuscles: { type: 'array', items: { type: 'string' } },
                   equipmentNeeded: {
                     type: 'array',
-                    description: 'متطلبات التمرين (المعدات) — كل عنصر: name, nameAr',
+                    description: 'متطلبات التمرين (المعدات) — كل عنصر: name, nameAr, nameIt',
                     items: {
                       type: 'object',
                       properties: {
                         name: { type: 'string' },
                         nameAr: { type: 'string' },
+                        nameIt: { type: 'string' },
                       },
                     },
                   },
@@ -1521,6 +1741,90 @@ const swaggerDocument = {
         },
       },
     },
+    '/measurements/baseline': {
+      get: {
+        tags: ['Measurements'],
+        summary: 'Get my baseline (start) values',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Baseline (start) snapshot or null' }, 401: { description: 'Unauthorized' } },
+      },
+      put: {
+        tags: ['Measurements'],
+        summary: 'Create/update my baseline (start) values',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['weight'],
+                properties: {
+                  weight: { type: 'number' },
+                  bodyFat: { type: 'number', nullable: true },
+                  muscleMass: { type: 'number', nullable: true },
+                  water: { type: 'number', nullable: true },
+                  waist: { type: 'number', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Baseline saved' }, 400: { description: 'Validation error' }, 401: { description: 'Unauthorized' } },
+      },
+      delete: {
+        tags: ['Measurements'],
+        summary: 'Delete my baseline (start) values',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Deleted' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/measurements/goal': {
+      get: {
+        tags: ['Measurements'],
+        summary: 'Get my goal values',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Goal snapshot or null' }, 401: { description: 'Unauthorized' } },
+      },
+      put: {
+        tags: ['Measurements'],
+        summary: 'Create/update my goal values',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['weight'],
+                properties: {
+                  weight: { type: 'number' },
+                  bodyFat: { type: 'number', nullable: true },
+                  muscleMass: { type: 'number', nullable: true },
+                  water: { type: 'number', nullable: true },
+                  waist: { type: 'number', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Goal saved' }, 400: { description: 'Validation error' }, 401: { description: 'Unauthorized' } },
+      },
+      delete: {
+        tags: ['Measurements'],
+        summary: 'Delete my goal values',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Deleted' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/measurements/progress/summary': {
+      get: {
+        tags: ['Measurements'],
+        summary: 'Progress summary using baseline + latest measurement + goal (with progressPercent)',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'baseline, current, goal, metrics{...}' }, 401: { description: 'Unauthorized' } },
+      },
+    },
     '/measurements/{id}': {
       get: {
         tags: ['Measurements'],
@@ -1560,6 +1864,17 @@ const swaggerDocument = {
         responses: { 200: { description: 'referrals[] (id, name, joinedAt)' }, 401: { description: 'Unauthorized' } },
       },
     },
+    '/referrals/me': {
+      get: {
+        tags: ['Referrals'],
+        summary: 'Referrals screen payload (mobile/dashboard)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'referralCode, friendsJoined, discountEarned, mySubscription, referrals[]' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
 
     // ——— Subscription (Premium) ———
     '/subscription/my': {
@@ -1576,19 +1891,30 @@ const swaggerDocument = {
     '/subscription/upgrade': {
       post: {
         tags: ['Subscription'],
-        summary: 'Upgrade to Premium (mock: sets plan and endsAt)',
+        summary: 'Upgrade to Premium (by packageId or durationMonths)',
         security: [{ bearerAuth: [] }],
         requestBody: {
           content: {
             'application/json': {
               schema: {
                 type: 'object',
-                properties: { durationMonths: { type: 'integer', default: 1 } },
+                properties: {
+                  packageId: { type: 'string', description: 'Preferred: upgrade by package' },
+                  durationMonths: { type: 'integer', default: 1, description: 'Legacy fallback' },
+                },
               },
             },
           },
         },
         responses: { 200: { description: 'Updated subscription' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/subscription/packages': {
+      get: {
+        tags: ['Subscription'],
+        summary: 'List active subscription packages',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'items[] (name, durationMonths, listPrice, payPrice, currency)' }, 401: { description: 'Unauthorized' } },
       },
     },
     '/subscription/apply-discount': {

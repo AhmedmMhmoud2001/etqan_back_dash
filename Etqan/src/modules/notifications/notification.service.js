@@ -35,6 +35,8 @@ const create = async (data) => {
 
 /** إرسال إشعار لجميع المستخدمين (عند إضافة/تعديل محتوى: بوست، وجبة، تمرين) */
 const broadcast = async ({ title, body, type, link }) => {
+  // Avoid fire-and-forget side effects in tests (keeps Jest clean).
+  if (process.env.NODE_ENV === 'test') return { count: 0 };
   const { count, userIds = [] } = await notificationRepository.createBroadcast({ title, body, type, link });
   try {
     const socketService = require('../../socket');

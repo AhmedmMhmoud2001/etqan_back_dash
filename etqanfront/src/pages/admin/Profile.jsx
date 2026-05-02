@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
-import { getToken, uploadImage } from '../../api';
-
-const API_BASE = '/api';
+import { getToken, uploadImage, API_BASE, resolveMediaUrl } from '../../api';
 
 const LABEL_KEYS = {
   measurementSystem: 'measurementSystem',
@@ -91,6 +89,40 @@ export default function AdminProfile() {
           return;
         }
         if (res.status === 404) {
+          // Create an empty profile once (avoids repeated 404 noise).
+          const createRes = await fetch(`${API_BASE}/profiles/me`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${getToken()}`,
+            },
+            body: JSON.stringify({}),
+          });
+          if (createRes.status === 401) {
+            navigate('/login', { replace: true });
+            return;
+          }
+          if (createRes.ok) {
+            const createdJson = await createRes.json().catch(() => ({}));
+            const p = createdJson.data || createdJson;
+            setProfile(p);
+            setImageError(false);
+            setForm({
+              imageUrl: p.imageUrl ?? '',
+              measurementSystem: p.measurementSystem ?? 'METRIC',
+              gender: p.gender ?? '',
+              age: p.age ?? '',
+              height: p.height ?? '',
+              weight: p.weight ?? '',
+              activityLevel: p.activityLevel ?? '',
+              goal: p.goal ?? '',
+              targetWeight: p.targetWeight ?? '',
+              dietaryPreferences: Array.isArray(p.dietaryPreferences) ? p.dietaryPreferences : [],
+              allergies: Array.isArray(p.allergies) ? p.allergies : [],
+              healthConditions: Array.isArray(p.healthConditions) ? p.healthConditions : [],
+            });
+            return;
+          }
           setProfile(null);
           setForm(defaultProfile);
           return;
@@ -208,7 +240,7 @@ export default function AdminProfile() {
           <div className="shrink-0">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center">
               {form.imageUrl && !imageError ? (
-                <img src={form.imageUrl} alt="" className="w-full h-full object-cover" onError={() => setImageError(true)} />
+                <img src={resolveMediaUrl(form.imageUrl)} alt="" className="w-full h-full object-cover" onError={() => setImageError(true)} />
               ) : (
                 <span className="w-full h-full flex items-center justify-center text-3xl text-slate-400 dark:text-slate-500" aria-hidden>👤</span>
               )}

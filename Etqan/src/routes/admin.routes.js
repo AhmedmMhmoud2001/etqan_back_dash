@@ -4,6 +4,12 @@ const adminValidator = require('../modules/admin/admin.validator');
 const profileValidator = require('../modules/profiles/profile.validator');
 const channelController = require('../modules/channels/channel.controller');
 const channelValidator = require('../modules/channels/channel.validator');
+const adminSubscriptionController = require('../modules/subscription/adminSubscription.controller');
+const adminSubscriptionValidator = require('../modules/subscription/adminSubscription.validator');
+const packageController = require('../modules/subscriptionPackage/subscriptionPackage.controller');
+const packageValidator = require('../modules/subscriptionPackage/subscriptionPackage.validator');
+const referralSettingsController = require('../modules/referrals/referralSettings.admin.controller');
+const referralSettingsValidator = require('../modules/referrals/referralSettings.admin.validator');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -46,6 +52,22 @@ router.get('/nutrition-plans', asyncHandler(adminController.listNutritionPlans))
 
 // خطط التمارين الأسبوعية — عرض كل الخطط للأدمن
 router.get('/workout-plans', asyncHandler(adminController.listWorkoutPlans));
+
+// Subscriptions — إدارة اشتراكات المستخدمين
+router.get('/subscriptions', adminSubscriptionValidator.listRules(), adminSubscriptionValidator.validate, asyncHandler(adminSubscriptionController.list));
+router.get('/subscriptions/:userId', adminSubscriptionValidator.userIdParamRules(), adminSubscriptionValidator.validate, asyncHandler(adminSubscriptionController.getByUserId));
+router.patch('/subscriptions/:userId', adminSubscriptionValidator.updateRules(), adminSubscriptionValidator.validate, asyncHandler(adminSubscriptionController.updateByUserId));
+router.post('/subscriptions/:userId/assign-package', adminSubscriptionValidator.assignPackageRules(), adminSubscriptionValidator.validate, asyncHandler(adminSubscriptionController.assignPackage));
+
+// Referrals settings — تحديد نسبة الخصم
+router.get('/referrals/settings', asyncHandler(referralSettingsController.get));
+router.patch('/referrals/settings', referralSettingsValidator.updateRules(), referralSettingsValidator.validate, asyncHandler(referralSettingsController.update));
+
+// Packages — إدارة باقات Premium
+router.get('/packages', packageValidator.listRules(), packageValidator.validate, asyncHandler(packageController.list));
+router.get('/packages/:id', packageValidator.idParamRules(), packageValidator.validate, asyncHandler(packageController.getById));
+router.post('/packages', packageValidator.createRules(), packageValidator.validate, asyncHandler(packageController.create));
+router.patch('/packages/:id', packageValidator.updateRules(), packageValidator.validate, asyncHandler(packageController.update));
 
 // ملاحظات الأطباء — كل الملاحظات مع فلتر بالدكتور أو المستخدم
 router.get('/doctor-notes', asyncHandler(adminController.listDoctorNotes));

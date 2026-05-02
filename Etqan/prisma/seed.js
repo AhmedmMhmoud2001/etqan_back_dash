@@ -20,6 +20,70 @@ const hash = (password) => bcrypt.hashSync(password, 12);
 async function main() {
   console.log('🌱 Seeding...');
 
+  // ——— Referral settings (discounts) ———
+  const existingReferralSettings = await prisma.$queryRaw`
+    SELECT id FROM ReferralSettings ORDER BY createdAt ASC LIMIT 1
+  `;
+  if (!existingReferralSettings?.[0]?.id) {
+    await prisma.$executeRaw`
+      INSERT INTO ReferralSettings (id, discountPercentPerReferral, maxDiscountPercent, createdAt, updatedAt)
+      VALUES (${require('crypto').randomUUID()}, 10, 50, NOW(), NOW())
+    `;
+  }
+
+  // ——— باقات الاشتراك (Premium Packages) ———
+  const packages = [
+    { name: 'Premium Monthly', durationMonths: 1, listPrice: '199.00', payPrice: '199.00', currency: 'EGP', isActive: true },
+    { name: 'Premium 3 Months', durationMonths: 3, listPrice: '549.00', payPrice: '549.00', currency: 'EGP', isActive: true },
+    { name: 'Premium 6 Months', durationMonths: 6, listPrice: '999.00', payPrice: '999.00', currency: 'EGP', isActive: true },
+    { name: 'Premium Yearly', durationMonths: 12, listPrice: '1799.00', payPrice: '1799.00', currency: 'EGP', isActive: true },
+  ];
+  for (const p of packages) {
+    // upsert via unique-like match (name + duration) using findFirst
+    const existing = await prisma.subscriptionPackage.findFirst({
+      where: { name: p.name, durationMonths: p.durationMonths },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.subscriptionPackage.create({ data: p });
+    }
+  }
+  console.log('Created subscription packages');
+
+  // ——— Banners (اختياري) ———
+  const existingBanner = await prisma.banner.findFirst({ select: { id: true } }).catch(() => null);
+  if (!existingBanner?.id) {
+    await prisma.banner.createMany({
+      data: [
+        {
+          title: 'Welcome to Etqan',
+          titleAr: 'مرحباً بك في Etqan',
+          titleIt: 'Benvenuto in Etqan',
+          description: 'Start your journey with personalized plans.',
+          descriptionAr: 'ابدأ رحلتك مع خطط مخصصة لك.',
+          descriptionIt: 'Inizia il tuo percorso con piani personalizzati.',
+          imageUrl: '/uploads/sample-banner-1.jpg',
+          link: null,
+          order: 0,
+          isActive: true,
+        },
+        {
+          title: 'Premium offers',
+          titleAr: 'عروض Premium',
+          titleIt: 'Offerte Premium',
+          description: 'Unlock premium features and content.',
+          descriptionAr: 'افتح مميزات ومحتوى بريميم.',
+          descriptionIt: 'Sblocca funzionalità e contenuti premium.',
+          imageUrl: '/uploads/sample-banner-2.jpg',
+          link: null,
+          order: 1,
+          isActive: false,
+        },
+      ],
+    }).catch(() => {});
+    console.log('Created sample banners (imageUrl placeholders)');
+  }
+
   // ——— المستخدمون ———
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@etqan.com' },
@@ -64,8 +128,14 @@ async function main() {
     create: {
       userId: doctor1User.id,
       title: 'Fitness Coach',
+      titleAr: 'مدرب لياقة',
+      titleIt: 'Allenatore fitness',
       specialization: 'Nutrition & Exercise',
+      specializationAr: 'التغذية والتمارين',
+      specializationIt: 'Nutrizione e allenamento',
       bio: 'Expert in weight management and strength training.',
+      bioAr: 'خبير في إدارة الوزن وتمارين القوة.',
+      bioIt: 'Esperta in gestione del peso e allenamento della forza.',
       isActive: true,
     },
   });
@@ -75,9 +145,15 @@ async function main() {
     update: {},
     create: {
       userId: doctor2User.id,
-      title: 'طبيب تغذية',
+      title: 'Nutrition Doctor',
+      titleAr: 'طبيب تغذية',
+      titleIt: 'Medico nutrizionista',
       specialization: 'Sports Nutrition',
+      specializationAr: 'التغذية الرياضية',
+      specializationIt: 'Nutrizione sportiva',
       bio: 'متخصص في التغذية الرياضية وإنقاص الوزن.',
+      bioAr: 'متخصص في التغذية الرياضية وإنقاص الوزن.',
+      bioIt: 'Specialista in nutrizione sportiva e perdita di peso.',
       isActive: true,
     },
   });
@@ -85,7 +161,12 @@ async function main() {
 
   const patient1 = await prisma.user.upsert({
     where: { email: 'marwa@etqan.com' },
-    update: {},
+    update: {
+      role: 'USER',
+      emailVerified: true,
+      doctorId: doc1.id,
+      referralCode: 'ETQAN2026',
+    },
     create: {
       email: 'marwa@etqan.com',
       password: hash('User@123'),
@@ -99,7 +180,11 @@ async function main() {
 
   const patient2 = await prisma.user.upsert({
     where: { email: 'patient2@etqan.com' },
-    update: {},
+    update: {
+      role: 'USER',
+      emailVerified: true,
+      doctorId: doc1.id,
+    },
     create: {
       email: 'patient2@etqan.com',
       password: hash('User@123'),
@@ -112,7 +197,11 @@ async function main() {
 
   const patient3 = await prisma.user.upsert({
     where: { email: 'patient3@etqan.com' },
-    update: {},
+    update: {
+      role: 'USER',
+      emailVerified: true,
+      doctorId: doc2.id,
+    },
     create: {
       email: 'patient3@etqan.com',
       password: hash('User@123'),
@@ -150,6 +239,8 @@ async function main() {
     meal1 = await prisma.meal.create({
       data: {
         name: 'Grilled Chicken Salad',
+        nameAr: 'سلطة دجاج مشوي',
+        nameIt: 'Insalata di pollo alla griglia',
         mealType: 'LUNCH',
         prepTimeMinutes: 25,
         calories: 350,
@@ -172,6 +263,8 @@ async function main() {
   await prisma.meal.create({
     data: {
       name: 'Oatmeal with Banana',
+      nameAr: 'شوفان مع موز',
+      nameIt: 'Porridge d’avena con banana',
       mealType: 'BREAKFAST',
       prepTimeMinutes: 10,
       calories: 280,
@@ -191,6 +284,8 @@ async function main() {
   await prisma.meal.create({
     data: {
       name: 'Salmon with Rice',
+      nameAr: 'سلمون مع أرز',
+      nameIt: 'Salmone con riso',
       mealType: 'DINNER',
       prepTimeMinutes: 35,
       calories: 520,
@@ -215,8 +310,15 @@ async function main() {
     data: {
       name: 'Bench Press',
       nameAr: 'ضغط البنش',
+      nameIt: 'Distensioni su panca',
       description: 'Compound chest exercise with barbell or dumbbells.',
+      descriptionAr: 'تمرين مركب للصدر باستخدام بار أو دمبل.',
+      descriptionIt: 'Esercizio multiarticolare per il petto con bilanciere o manubri.',
       targetMuscles: ['CHEST', 'SHOULDER', 'TRICEPS'],
+      equipmentNeeded: [
+        { name: 'Barbell', nameAr: 'بار', nameIt: 'Bilanciere' },
+        { name: 'Bench', nameAr: 'بنش', nameIt: 'Panca' },
+      ],
       addedByUserId: adminUser.id,
     },
   });
@@ -227,8 +329,14 @@ async function main() {
     data: {
       name: 'Squat',
       nameAr: 'السكوات',
+      nameIt: 'Squat',
       description: 'Lower body compound movement.',
+      descriptionAr: 'حركة مركبة لعضلات الجزء السفلي من الجسم.',
+      descriptionIt: 'Movimento multiarticolare per la parte inferiore del corpo.',
       targetMuscles: ['QUADS', 'GLUTES', 'HAMSTRINGS'],
+      equipmentNeeded: [
+        { name: 'Barbell', nameAr: 'بار', nameIt: 'Bilanciere' },
+      ],
       addedByUserId: adminUser.id,
     },
   });
@@ -239,7 +347,14 @@ async function main() {
     data: {
       name: 'Deadlift',
       nameAr: 'الرفعة المميتة',
+      nameIt: 'Stacco da terra',
+      description: 'Full-body compound lift focusing on posterior chain.',
+      descriptionAr: 'تمرين مركب للجسم كامل يركز على السلسلة الخلفية.',
+      descriptionIt: 'Sollevamento multiarticolare per tutto il corpo con focus sulla catena posteriore.',
       targetMuscles: ['BACK', 'GLUTES', 'HAMSTRINGS'],
+      equipmentNeeded: [
+        { name: 'Barbell', nameAr: 'بار', nameIt: 'Bilanciere' },
+      ],
       addedByUserId: adminUser.id,
     },
   });
@@ -252,7 +367,11 @@ async function main() {
     await prisma.channel.create({
       data: {
         name: 'مجتمع Etqan',
+        nameAr: 'مجتمع Etqan',
+        nameIt: 'Community Etqan',
         description: 'قناة عامة للمناقشات والدعم',
+        descriptionAr: 'قناة عامة للمناقشات والدعم',
+        descriptionIt: 'Canale pubblico per discussioni e supporto',
         icon: '💪',
         isActive: true,
       },

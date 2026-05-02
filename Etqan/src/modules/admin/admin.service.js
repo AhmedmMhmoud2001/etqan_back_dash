@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const adminRepository = require('./admin.repository');
 const notificationService = require('../notifications/notification.service');
 const profileService = require('../profiles/profile.service');
+const { pickDoctorWithLeastPatients } = require('../../utils/doctorAssignment');
 
 const sanitizeUser = (user) => {
   const { password: _, ...rest } = user;
@@ -37,12 +38,14 @@ const createUser = async (data) => {
     throw err;
   }
   const hashedPassword = await bcrypt.hash(data.password, 12);
+  const doctorId = await pickDoctorWithLeastPatients();
   const user = await adminRepository.createUser({
     name: data.name,
     email: data.email,
     password: hashedPassword,
     role: 'USER',
     emailVerified: data.emailVerified !== false,
+    doctorId: doctorId || undefined,
   });
   return sanitizeUser(user);
 };
@@ -149,7 +152,17 @@ const createDoctor = async (data) => {
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const doctor = await adminRepository.createDoctor(
     { name: data.name, email: data.email, password: hashedPassword, emailVerified: data.emailVerified !== false },
-    { title: data.title, titleAr: data.titleAr, specialization: data.specialization, specializationAr: data.specializationAr, bio: data.bio, bioAr: data.bioAr }
+    {
+      title: data.title,
+      titleAr: data.titleAr,
+      titleIt: data.titleIt,
+      specialization: data.specialization,
+      specializationAr: data.specializationAr,
+      specializationIt: data.specializationIt,
+      bio: data.bio,
+      bioAr: data.bioAr,
+      bioIt: data.bioIt,
+    }
   );
   return sanitizeDoctor(doctor);
 };

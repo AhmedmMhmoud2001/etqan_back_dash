@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const LANG_STORAGE_KEY = 'etqan-admin-lang';
+const SUPPORTED_LANGS = ['ar', 'en', 'it'];
 
 function getStored() {
   if (typeof window === 'undefined') return 'ar';
   try {
     const stored = localStorage.getItem(LANG_STORAGE_KEY);
-    return stored === 'en' ? 'en' : 'ar';
+    return SUPPORTED_LANGS.includes(stored) ? stored : 'ar';
   } catch {
     return 'ar';
   }

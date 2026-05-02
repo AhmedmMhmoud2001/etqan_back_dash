@@ -5,6 +5,7 @@ const likeRepository = require('./like.repository');
 const shareRepository = require('./share.repository');
 const followRepository = require('./follow.repository');
 const notificationService = require('../notifications/notification.service');
+const { shouldRemoveMessage } = require('../../utils/moderation');
 
 const formatPost = (post, currentUserId = null) => {
   if (!post) return null;
@@ -52,6 +53,9 @@ const createPost = async (userId, data) => {
     err.statusCode = 400;
     throw err;
   }
+  if (shouldRemoveMessage(data.content)) {
+    return { removed: true };
+  }
   const post = await postRepository.create({
     userId,
     content: data.content.trim(),
@@ -86,6 +90,10 @@ const updatePost = async (postId, userId, data) => {
       const err = new Error('Content cannot be empty');
       err.statusCode = 400;
       throw err;
+    }
+    if (typeof c === 'string' && shouldRemoveMessage(c)) {
+      await postRepository.remove(postId);
+      return { removed: true, deleted: true };
     }
     payload.content = c;
   }
@@ -142,6 +150,9 @@ const addComment = async (postId, userId, content) => {
     err.statusCode = 400;
     throw err;
   }
+  if (shouldRemoveMessage(content)) {
+    return { removed: true };
+  }
   return commentRepository.create({ postId, userId, content: content.trim() });
 };
 
@@ -161,6 +172,10 @@ const updateComment = async (commentId, userId, content) => {
     const err = new Error('Comment content is required');
     err.statusCode = 400;
     throw err;
+  }
+  if (shouldRemoveMessage(content)) {
+    await commentRepository.remove(commentId);
+    return { removed: true, deleted: true };
   }
   return commentRepository.update(commentId, { content: content.trim() });
 };

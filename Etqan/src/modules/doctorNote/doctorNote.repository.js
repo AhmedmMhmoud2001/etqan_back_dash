@@ -45,9 +45,26 @@ const findByPatientId = async (patientId, limit = 20) => {
   });
 };
 
+const findByDoctorPatientsDoctorId = async (doctorId, limit = 100) => {
+  return prisma.doctorNote.findMany({
+    where: {
+      patient: {
+        doctorId,
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      doctor: { include: { user: { select: { id: true, name: true } } } },
+      patient: { select: { id: true, name: true } },
+    },
+  });
+};
+
 module.exports = {
   create,
   getLatestForPatient,
   findById,
   findByPatientId,
+  findByDoctorPatientsDoctorId,
 };
