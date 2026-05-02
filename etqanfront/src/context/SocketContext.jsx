@@ -18,7 +18,9 @@ export function SocketProvider({ children }) {
     const s = io(socketUrl, {
       path: '/socket.io',
       auth: { token },
-      transports: ['websocket', 'polling'],
+      // في بعض إعدادات Nginx/Proxy قد يفشل websocket upgrade (wss) بينما polling يعمل.
+      // نبدأ بـ polling ثم نسمح بالترقية إن كانت متاحة لتقليل أخطاء الكونسول.
+      transports: ['polling', 'websocket'],
     });
     setSocket(s);
 
