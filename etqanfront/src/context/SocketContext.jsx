@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { getToken } from '../api';
+import { getSocketIoBaseUrl, getToken } from '../api';
 
 const SocketContext = createContext({ socket: null, connected: false });
 
@@ -12,9 +12,7 @@ export function SocketProvider({ children }) {
     const token = getToken();
     if (!token) return;
 
-    const backend = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
-    const socketUrl =
-      backend || (import.meta.env.DEV ? '' : window.location.origin);
+    const socketUrl = getSocketIoBaseUrl();
     const s = io(socketUrl, {
       path: '/socket.io',
       auth: { token },

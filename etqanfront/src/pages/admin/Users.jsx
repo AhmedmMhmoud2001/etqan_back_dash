@@ -4,6 +4,7 @@ import { useLang } from '../../context/LangContext';
 import { useTranslation } from '../../translations';
 import { get, post, patch, del, uploadImage, resolveMediaUrl } from '../../api';
 import { IconEdit, IconDelete, IconAssignDoctor, IconDeactivate, IconActivate, IconView } from '../../components/ActionIcons';
+import { ADMIN_OPEN_USER_EDIT_KEY } from './UserDetail';
 
 const MEASUREMENT_SYSTEM = [{ value: 'METRIC', label: 'متري' }, { value: 'IMPERIAL', label: 'إمبراطوري' }];
 const GENDER = [{ value: 'MALE', label: 'ذكر' }, { value: 'FEMALE', label: 'أنثى' }, { value: 'OTHER', label: 'آخر' }];
@@ -32,11 +33,8 @@ export default function AdminUsers() {
   const [searchInput, setSearchInput] = useState(''); // قيمة حقل البحث (للتأخير عند الكتابة)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [modal, setModal] = useState(null); // 'create' | 'edit' | 'assign' | 'view' | null
+  const [modal, setModal] = useState(null); // 'create' | 'edit' | 'assign' | null
   const [selected, setSelected] = useState(null);
-  const [userDetails, setUserDetails] = useState(null);
-  const [workoutSessions, setWorkoutSessions] = useState([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [form, setForm] = useState({
@@ -140,29 +138,28 @@ export default function AdminUsers() {
     });
   };
 
+  /** عودة من صفحة التفاصيل مع طلب تحرير (زر «تحرير» في AdminUserDetail). */
+  useEffect(() => {
+    let storedId = '';
+    try {
+      storedId = sessionStorage.getItem(ADMIN_OPEN_USER_EDIT_KEY) || '';
+    } catch {
+      return;
+    }
+    if (!storedId) return;
+    try {
+      sessionStorage.removeItem(ADMIN_OPEN_USER_EDIT_KEY);
+    } catch {
+      void 0;
+    }
+    openEdit({ id: storedId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- تشغيل مرة عند فتح قائمة المستخدمين فقط
+  }, []);
+
   const openAssign = (user) => {
     setSelected(user);
     setForm({ doctorId: user.doctorId || user.doctor?.id || '' });
     setModal('assign');
-  };
-
-  const openViewDetails = async (user) => {
-    setSelected(user);
-    setUserDetails(null);
-    setWorkoutSessions([]);
-    setModal('view');
-    setLoadingDetails(true);
-    const [userRes, sessionsRes] = await Promise.all([
-      get(`/admin/users/${user.id}`),
-      get(`/admin/users/${user.id}/workout-sessions?limit=30`),
-    ]);
-    setLoadingDetails(false);
-    if (userRes.status === 401) {
-      navigate('/login', { replace: true });
-      return;
-    }
-    if (userRes.ok) setUserDetails(userRes.data?.data || userRes.data);
-    if (sessionsRes.ok) setWorkoutSessions(sessionsRes.data?.data?.sessions || sessionsRes.data?.sessions || []);
   };
 
   const handleCreate = async (e) => {
@@ -385,7 +382,7 @@ export default function AdminUsers() {
                       <div className="flex flex-wrap gap-1 justify-end items-center">
                         <button
                           type="button"
-                          onClick={() => openViewDetails(user)}
+                          onClick={() => navigate(`/admin/users/${user.id}`)}
                           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                           title={t('viewDetails') || 'عرض التفاصيل'}
                           aria-label={t('viewDetails') || 'View details'}
@@ -465,214 +462,6 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
-
-      {/* Modal عرض تفاصيل المستخدم */}
-      {modal === 'view' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setModal(null)}>
-          <div
-            className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{t('viewDetails')}</h2>
-            {loadingDetails ? (
-              <div className="py-8 text-center text-slate-500 dark:text-slate-400">{t('loading')}</div>
-            ) : userDetails ? (
-              <div className="space-y-6">
-                {/* بيانات الحساب */}
-                <section>
-                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">
-                    {lang === 'ar' ? 'بيانات الحساب' : 'Account info'}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('name')}</p><p className="text-slate-800 dark:text-slate-100 font-medium">{userDetails.name}</p></div>
-                    <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('email')}</p><p className="text-slate-800 dark:text-slate-100 break-all">{userDetails.email}</p></div>
-                    <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('role')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.role}</p></div>
-                    <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('status')}</p>
-                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${userDetails.isActive !== false ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-300'}`}>
-                        {userDetails.isActive !== false ? t('active') : t('inactive')}
-                      </span>
-                    </div>
-                    {userDetails.emailVerified != null && (
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'البريد موثّق' : 'Email verified'}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.emailVerified ? (lang === 'ar' ? 'نعم' : 'Yes') : (lang === 'ar' ? 'لا' : 'No')}</p></div>
-                    )}
-                    {userDetails.createdAt && (
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</p><p className="text-slate-600 dark:text-slate-300">{new Date(userDetails.createdAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en')}</p></div>
-                    )}
-                    {userDetails.updatedAt && (
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'آخر تحديث' : 'Updated'}</p><p className="text-slate-600 dark:text-slate-300">{new Date(userDetails.updatedAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en')}</p></div>
-                    )}
-                  </div>
-                </section>
-
-                {/* إحصائيات ونسبة التطور */}
-                {userDetails.stats && (
-                  <section>
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">
-                      {lang === 'ar' ? 'إحصائيات ونسبة التطور' : 'Progress & Statistics'}
-                    </h3>
-                    <div className="space-y-4">
-                      {/* شريط التطور حسب الوزن (إن وُجد هدف وقياسات) */}
-                      {(() => {
-                        const target = userDetails.profile?.targetWeight;
-                        const latest = userDetails.stats.latestWeight ?? userDetails.profile?.weight;
-                        const start = userDetails.stats.firstWeight ?? userDetails.profile?.weight;
-                        const goal = userDetails.profile?.goal;
-                        let progressPct = null;
-                        if (target != null && latest != null && start != null && goal) {
-                          if (goal === 'LOSE_WEIGHT' && start > target) {
-                            progressPct = Math.min(100, Math.max(0, ((start - latest) / (start - target)) * 100));
-                          } else if (goal === 'BUILD_MUSCLE' && target > start) {
-                            progressPct = Math.min(100, Math.max(0, ((latest - start) / (target - start)) * 100));
-                          } else if (goal === 'MAINTAIN' && target > 0) {
-                            const diff = Math.abs(latest - target);
-                            progressPct = diff <= 2 ? 100 : Math.max(0, 100 - diff * 10);
-                          }
-                        }
-                        return progressPct != null ? (
-                          <div>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-slate-600 dark:text-slate-400">{lang === 'ar' ? 'نسبة التطور (الوزن)' : 'Weight progress'}</span>
-                              <span className="font-medium text-slate-800 dark:text-slate-100">{Math.round(progressPct)}%</span>
-                            </div>
-                            <div className="h-2.5 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-primary-500 transition-all"
-                                style={{ width: `${Math.round(progressPct)}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              {start != null && `${lang === 'ar' ? 'البداية' : 'Start'}: ${start} kg`}
-                              {latest != null && ` → ${lang === 'ar' ? 'الحالي' : 'Current'}: ${latest} kg`}
-                              {target != null && ` → ${lang === 'ar' ? 'الهدف' : 'Target'}: ${target} kg`}
-                            </p>
-                          </div>
-                        ) : null;
-                      })()}
-                      {/* بطاقات الإحصائيات */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{userDetails.stats.measurementsCount ?? 0}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'القياسات' : 'Measurements'}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{userDetails.stats.mealLogsCount ?? 0}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'سجلات الوجبات' : 'Meal logs'}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{userDetails.stats.workoutSessionsCount ?? 0}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'جلسات التمرين' : 'Workout sessions'}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 p-3 text-center">
-                          <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{userDetails.stats.nutritionPlansCount ?? 0}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'خطط التغذية' : 'Nutrition plans'}</p>
-                        </div>
-                      </div>
-                      {userDetails.stats.latestMeasuredAt && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {lang === 'ar' ? 'آخر قياس' : 'Last measurement'}: {new Date(userDetails.stats.latestMeasuredAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en')}
-                          {userDetails.stats.latestBodyFat != null && ` • ${lang === 'ar' ? 'دهون' : 'Body fat'}: ${userDetails.stats.latestBodyFat}%`}
-                          {userDetails.stats.latestWaist != null && ` • ${lang === 'ar' ? 'خصر' : 'Waist'}: ${userDetails.stats.latestWaist} cm`}
-                        </p>
-                      )}
-                    </div>
-                  </section>
-                )}
-
-                {/* جلسات التمرين — عدد العدات التي قام بها من كل تمرين */}
-                {workoutSessions.length > 0 && (
-                  <section>
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">{lang === 'ar' ? 'جلسات التمرين — العدات المنفذة' : 'Workout sessions — reps performed'}</h3>
-                    <div className="space-y-4 max-h-80 overflow-y-auto">
-                      {workoutSessions.map((sess) => (
-                        <div key={sess.id} className="rounded-lg border border-slate-200 dark:border-slate-600 p-3 bg-slate-50/50 dark:bg-slate-700/30 text-sm">
-                          <div className="font-medium text-slate-800 dark:text-slate-100 mb-2">
-                            {(sess.exercises?.[0]?.exercise
-                              ? (lang === 'ar'
-                                ? sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.nameIt || sess.exercises[0].exercise.name
-                                : lang === 'it'
-                                  ? sess.exercises[0].exercise.nameIt || sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr
-                                  : sess.exercises[0].exercise.name || sess.exercises[0].exercise.nameAr || sess.exercises[0].exercise.nameIt)
-                              : (lang === 'ar' ? 'جلسة تمرين' : lang === 'it' ? 'Allenamento' : 'Workout'))} — {sess.startedAt ? new Date(sess.startedAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : lang === 'it' ? 'it-IT' : 'en-US') : ''} {sess.status === 'COMPLETED' ? (lang === 'ar' ? '(مكتملة)' : lang === 'it' ? '(completato)' : '(completed)') : ''}
-                          </div>
-                          <ul className="space-y-2">
-                            {(sess.exercises || []).map((ex) => (
-                              <li key={ex.id} className="pl-2 border-l-2 border-primary-400/50">
-                                <span className="font-medium text-slate-700 dark:text-slate-200">{lang === 'ar' ? ex.exercise?.nameAr || ex.exercise?.nameIt || ex.exercise?.name : lang === 'it' ? ex.exercise?.nameIt || ex.exercise?.name || ex.exercise?.nameAr : ex.exercise?.name || ex.exercise?.nameAr || ex.exercise?.nameIt}</span>
-                                <span className="text-slate-500 dark:text-slate-400 ml-1">({ex.sets} {lang === 'ar' ? 'مجموعات' : 'sets'} × {ex.repMin}-{ex.repMax} {lang === 'ar' ? 'تكرار' : 'reps'})</span>
-                                <div className="mt-1 text-slate-600 dark:text-slate-300">
-                                  {lang === 'ar' ? 'العدات المنفذة' : 'Reps done'}: {(ex.setsLog || []).map((set) => set.actualReps != null ? set.actualReps : '—').join(', ')}
-                                  {(ex.setsLog || []).length === 0 && (lang === 'ar' ? '—' : '—')}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* الدكتور المعيّن */}
-                {userDetails.doctor && (
-                  <section>
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">{t('doctor')}</h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('name')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.doctor.user?.name || '—'}</p></div>
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('email')}</p><p className="text-slate-800 dark:text-slate-100 break-all">{userDetails.doctor.user?.email || '—'}</p></div>
-                      <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('title')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.doctor.title || '—'}</p></div>
-                    </div>
-                  </section>
-                )}
-
-                {/* البروفايل — البيانات الصحية والهدف */}
-                {userDetails.profile ? (
-                  <section>
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-2 mb-3">{lang === 'ar' ? 'البروفايل والهدف' : 'Profile & goals'}</h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {userDetails.profile.measurementSystem != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('measurementSystem')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.measurementSystem}</p></div>}
-                      {userDetails.profile.gender != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('gender')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.gender}</p></div>}
-                      {userDetails.profile.age != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('age')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.age}</p></div>}
-                      {userDetails.profile.height != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('height')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.height} cm</p></div>}
-                      {userDetails.profile.weight != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('weight')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.weight} kg</p></div>}
-                      {userDetails.profile.targetWeight != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('targetWeight')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.targetWeight} kg</p></div>}
-                      {userDetails.profile.activityLevel != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('activityLevel')}</p><p className="text-slate-800 dark:text-slate-100">{String(userDetails.profile.activityLevel).replace(/_/g, ' ')}</p></div>}
-                      {userDetails.profile.goal != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('goal')}</p><p className="text-slate-800 dark:text-slate-100">{String(userDetails.profile.goal).replace(/_/g, ' ')}</p></div>}
-                      {userDetails.profile.language != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('language')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.language}</p></div>}
-                      {userDetails.profile.notificationsEnabled != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'الإشعارات' : 'Notifications'}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.notificationsEnabled ? (lang === 'ar' ? 'مفعّلة' : 'On') : (lang === 'ar' ? 'معطّلة' : 'Off')}</p></div>}
-                      {userDetails.profile.darkMode != null && <div><p className="text-xs text-slate-500 dark:text-slate-400">{t('darkModeLabel')}</p><p className="text-slate-800 dark:text-slate-100">{userDetails.profile.darkMode ? (lang === 'ar' ? 'داكن' : 'Dark') : (lang === 'ar' ? 'فاتح' : 'Light')}</p></div>}
-                      {userDetails.profile.dietaryPreferences != null && (Array.isArray(userDetails.profile.dietaryPreferences) ? userDetails.profile.dietaryPreferences.length > 0 : true) && (
-                        <div className="col-span-2"><p className="text-xs text-slate-500 dark:text-slate-400">{t('dietaryPreferences')}</p><p className="text-slate-800 dark:text-slate-100">{Array.isArray(userDetails.profile.dietaryPreferences) ? userDetails.profile.dietaryPreferences.join(', ') : String(userDetails.profile.dietaryPreferences)}</p></div>
-                      )}
-                      {userDetails.profile.allergies != null && userDetails.profile.allergies?.length !== 0 && (
-                        <div className="col-span-2"><p className="text-xs text-slate-500 dark:text-slate-400">{t('allergies')}</p><p className="text-slate-800 dark:text-slate-100">{Array.isArray(userDetails.profile.allergies) ? userDetails.profile.allergies.join(', ') : String(userDetails.profile.allergies)}</p></div>
-                      )}
-                      {userDetails.profile.healthConditions != null && userDetails.profile.healthConditions?.length !== 0 && (
-                        <div className="col-span-2"><p className="text-xs text-slate-500 dark:text-slate-400">{t('healthConditions')}</p><p className="text-slate-800 dark:text-slate-100">{Array.isArray(userDetails.profile.healthConditions) ? userDetails.profile.healthConditions.join(', ') : String(userDetails.profile.healthConditions)}</p></div>
-                      )}
-                    </div>
-                  </section>
-                ) : (
-                  <section>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'لا يوجد بروفايل مكتمل لهذا المستخدم.' : 'No profile data for this user.'}</p>
-                  </section>
-                )}
-              </div>
-            ) : (
-              <p className="text-slate-500 dark:text-slate-400 py-4">{t('loadError')}</p>
-            )}
-            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-600 flex gap-2 justify-end">
-              <button type="button" onClick={() => setModal(null)} className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-500">
-                {t('cancel')}
-              </button>
-              {userDetails && (
-                <button type="button" onClick={() => { setModal(null); openEdit(userDetails); }} className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">
-                  {t('edit')}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Create */}
       {modal === 'create' && (

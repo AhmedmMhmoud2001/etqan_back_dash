@@ -138,7 +138,18 @@ export default function AdminChannels() {
                       {lang === 'ar' ? (ch.descriptionAr || ch.descriptionIt || ch.description || '—') : lang === 'it' ? (ch.descriptionIt || ch.description || ch.descriptionAr || '—') : (ch.description || ch.descriptionAr || ch.descriptionIt || '—')}
                     </td>
                     <td className="px-4 py-3 text-start">
-                      <div className="flex gap-1 justify-end items-center">
+                      <div className="flex gap-1 justify-end items-center flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/channels/${ch.id}/chat`)}
+                          className="p-2 rounded-lg text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors"
+                          title={t('channelsOpenChat')}
+                          aria-label={t('channelsOpenChat')}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </button>
                         <button type="button" onClick={() => openEdit(ch)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('edit')} aria-label={t('edit')}><IconEdit /></button>
                         <button type="button" onClick={() => handleDelete(ch)} className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title={t('delete')} aria-label={t('delete')}><IconDelete /></button>
                       </div>

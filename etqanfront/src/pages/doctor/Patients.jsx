@@ -12,6 +12,9 @@ export default function DoctorPatients() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const detailsLabel =
+    lang === 'ar' ? 'ملفّ المريض' : lang === 'it' ? 'Scheda paziente' : 'Patient file';
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -46,7 +49,7 @@ export default function DoctorPatients() {
     };
     load();
     return () => { cancelled = true; };
-  }, [navigate, t]);
+  }, [navigate, lang]);
 
   return (
     <div className="p-6 md:p-8">
@@ -72,6 +75,7 @@ export default function DoctorPatients() {
                   <th className="px-4 py-3 font-medium text-start">{t('name')}</th>
                   <th className="px-4 py-3 font-medium text-start">{t('email')}</th>
                   <th className="px-4 py-3 font-medium text-start">{t('status')}</th>
+                  <th className="px-4 py-3 font-medium text-end">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600 text-start">
@@ -80,6 +84,15 @@ export default function DoctorPatients() {
                     <td className="px-4 py-3 text-slate-800 dark:text-slate-200">{u.name || '—'}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{u.email || '—'}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{u.isActive ? t('active') : t('inactive')}</td>
+                    <td className="px-4 py-3 text-end">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/patients/${u.id}`)}
+                        className="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700"
+                      >
+                        {detailsLabel}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -93,4 +106,3 @@ export default function DoctorPatients() {
     </div>
   );
 }
-

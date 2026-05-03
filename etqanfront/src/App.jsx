@@ -4,12 +4,14 @@ import AdminLayout from './layouts/AdminLayout';
 import Login from './pages/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
+import AdminUserDetail from './pages/admin/UserDetail';
 import AdminDoctors from './pages/admin/Doctors';
 import AdminMeals from './pages/admin/Meals';
 import AdminExercises from './pages/admin/Exercises';
 import AdminNutritionPlans from './pages/admin/NutritionPlans';
 import AdminWorkoutPlans from './pages/admin/WorkoutPlans';
 import AdminChannels from './pages/admin/Channels';
+import AdminChannelChat from './pages/admin/ChannelChat';
 import AdminDoctorNotes from './pages/admin/DoctorNotes';
 import AdminCommunityPosts from './pages/admin/CommunityPosts';
 import AdminNotifications from './pages/admin/Notifications';
@@ -19,6 +21,8 @@ import AdminReferrals from './pages/admin/Referrals';
 import AdminPackages from './pages/admin/Packages';
 import AdminBanners from './pages/admin/Banners';
 import DoctorPatients from './pages/doctor/Patients';
+import DoctorPatientDetail from './pages/doctor/DoctorPatientDetail';
+import DoctorChat from './pages/doctor/DoctorChat';
 
 function ProtectedDashboard({ children }) {
   const token = localStorage.getItem('token');
@@ -26,6 +30,18 @@ function ProtectedDashboard({ children }) {
   if (!token || (user?.role !== 'ADMIN' && user?.role !== 'DOCTOR')) {
     return <Navigate to="/login" replace />;
   }
+  return children;
+}
+
+function RequireDoctor({ children }) {
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  if (user?.role !== 'DOCTOR') return <Navigate to="/admin/dashboard" replace />;
   return children;
 }
 
@@ -57,14 +73,18 @@ function App() {
       >
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users/:userId" element={<RequireAdmin><AdminUserDetail /></RequireAdmin>} />
         <Route path="users" element={<RequireAdmin><AdminUsers /></RequireAdmin>} />
         <Route path="doctors" element={<RequireAdmin><AdminDoctors /></RequireAdmin>} />
-        <Route path="patients" element={<RequireAdmin><DoctorPatients /></RequireAdmin>} />
+        <Route path="patients/:patientId" element={<DoctorPatientDetail />} />
+        <Route path="patients" element={<DoctorPatients />} />
+        <Route path="doctor-chat" element={<RequireDoctor><DoctorChat /></RequireDoctor>} />
         <Route path="meals" element={<AdminMeals />} />
         <Route path="exercises" element={<AdminExercises />} />
         <Route path="nutrition-plans" element={<AdminNutritionPlans />} />
         <Route path="workout-plans" element={<AdminWorkoutPlans />} />
         <Route path="channels" element={<AdminChannels />} />
+        <Route path="channels/:channelId/chat" element={<AdminChannelChat />} />
         <Route path="doctor-notes" element={<AdminDoctorNotes />} />
         <Route path="community-posts" element={<AdminCommunityPosts />} />
         <Route path="notifications" element={<AdminNotifications />} />

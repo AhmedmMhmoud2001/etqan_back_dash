@@ -9,6 +9,13 @@
 const BACKEND_ORIGIN = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
 export const API_BASE = BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/api` : '/api';
 
+/** نفس منطق الواجهة؛ للـ Socket.IO لتفادي أخطاء Vite ws proxy (ECONNRESET) في التطوير */
+export function getSocketIoBaseUrl() {
+  if (BACKEND_ORIGIN) return BACKEND_ORIGIN;
+  if (import.meta.env.DEV) return 'http://localhost:3000';
+  return typeof window !== 'undefined' ? window.location.origin : '';
+}
+
 /** رابط وسائط نسبية مثل `/uploads/...` يُكمَّل أمام BACKEND المنشور */
 export function resolveMediaUrl(url) {
   if (url == null || typeof url !== 'string') return url;

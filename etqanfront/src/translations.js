@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 export const translations = {
   ar: {
     // Layout
@@ -15,6 +17,14 @@ export const translations = {
     communityPosts: 'بوستات المجتمع',
     profile: 'البروفايل',
     patients: 'المرضى',
+    doctorChat: 'المحادثات',
+    doctorChatPageDesc: 'دردشتك الخاصة مع كل مريض معيّن لك؛ التحديثات الفورية عند الاتصال.',
+    doctorChatStartWith: 'بدء محادثة مع مريض',
+    doctorChatPickPatient: 'اختر مريضاً من قائمة مرضاك',
+    doctorChatSidebarTitle: 'محادثاتك',
+    doctorChatPatientPremium: 'مشترك — Premium نشط',
+    doctorChatPatientFree: 'غير مشترك — لا يوجد Premium نشط',
+    doctorChatOpenPatientPicker: 'فتح قائمة المرضى',
     settings: 'الإعدادات',
     logout: 'تسجيل الخروج',
     headerSubtitle: 'لوحة تحكم Etqan — الأدمن فقط',
@@ -82,6 +92,9 @@ export const translations = {
     workoutPlansDesc: 'الخطط الأسبوعية. (قيد التطوير)',
     channelsTitle: 'القنوات',
     channelsDesc: 'إدارة القنوات. (قيد التطوير)',
+    channelsOpenChat: 'فتح شات القناة',
+    channelsOpenChatBack: 'العودة إلى القنوات',
+    channelChatStaffDesc: 'محادثة القناة العامة — يظهر التحديث اللحظي عند الاتصال بالسيرفر.',
     doctorNotesTitle: 'ملاحظات الدكتور',
     doctorNotesDesc: 'ملاحظات الدكتور للمرضى. (قيد التطوير)',
     communityPostsTitle: 'بوستات المجتمع',
@@ -228,6 +241,14 @@ export const translations = {
     communityPosts: 'Community Posts',
     profile: 'Profile',
     patients: 'Patients',
+    doctorChat: 'Chats',
+    doctorChatPageDesc: 'Private chat with each assigned patient — live updates when connected.',
+    doctorChatStartWith: 'Start chat with a patient',
+    doctorChatPickPatient: 'Pick a patient from your list',
+    doctorChatSidebarTitle: 'Your chats',
+    doctorChatPatientPremium: 'Subscribed — active Premium',
+    doctorChatPatientFree: 'Not subscribed — no active Premium',
+    doctorChatOpenPatientPicker: 'Open patient list',
     settings: 'Settings',
     logout: 'Logout',
     headerSubtitle: 'Etqan Admin Dashboard',
@@ -291,6 +312,9 @@ export const translations = {
     workoutPlansDesc: 'Weekly plans. (In development)',
     channelsTitle: 'Channels',
     channelsDesc: 'Manage channels. (In development)',
+    channelsOpenChat: 'Open channel chat',
+    channelsOpenChatBack: 'Back to channels',
+    channelChatStaffDesc: 'Public channel chat — live updates when connected.',
     doctorNotesTitle: 'Doctor Notes',
     doctorNotesDesc: 'Doctor notes for patients. (In development)',
     communityPostsTitle: 'Community Posts',
@@ -437,6 +461,14 @@ export const translations = {
     communityPosts: 'Post community',
     profile: 'Profilo',
     patients: 'Pazienti',
+    doctorChat: 'Chat',
+    doctorChatPageDesc: 'Chat privata con ogni paziente assegnato — aggiornamenti in tempo reale se connesso.',
+    doctorChatStartWith: 'Inizia chat con un paziente',
+    doctorChatPickPatient: 'Seleziona un paziente dall\'elenco',
+    doctorChatSidebarTitle: 'Le tue chat',
+    doctorChatPatientPremium: 'Abbonato — Premium attivo',
+    doctorChatPatientFree: 'Non abbonato — nessun Premium attivo',
+    doctorChatOpenPatientPicker: 'Apri lista pazienti',
     settings: 'Impostazioni',
     logout: 'Esci',
     headerSubtitle: 'Pannello Admin Etqan',
@@ -500,6 +532,9 @@ export const translations = {
     workoutPlansDesc: 'Piani settimanali. (In sviluppo)',
     channelsTitle: 'Canali',
     channelsDesc: 'Gestisci canali. (In sviluppo)',
+    channelsOpenChat: 'Apri chat del canale',
+    channelsOpenChatBack: 'Torna ai canali',
+    channelChatStaffDesc: 'Chat pubblica del canale — aggiornamenti live se connesso.',
     doctorNotesTitle: 'Note del medico',
     doctorNotesDesc: 'Note del medico per i pazienti. (In sviluppo)',
     communityPostsTitle: 'Post community',
@@ -634,5 +669,8 @@ export const translations = {
 };
 
 export function useTranslation(lang) {
-  return (key) => translations[lang]?.[key] ?? key;
+  return useMemo(
+    () => (key) => translations[lang]?.[key] ?? key,
+    [lang]
+  );
 }

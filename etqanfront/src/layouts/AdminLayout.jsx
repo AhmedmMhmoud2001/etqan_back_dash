@@ -32,6 +32,10 @@ const IconWorkoutPlans = () => (
 const IconChannels = () => (
   <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
 );
+/** محادثات طبيب–مريض (شات خاص)، أيقونة مماثلة لتفرقة واجهة القنوات */
+const IconDoctorChat = () => (
+  <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-6 8l4-4h8a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v14l2-2z" /></svg>
+);
 const IconDoctorNotes = () => (
   <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
 );
@@ -73,31 +77,54 @@ const IconLogout = () => (
   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
 );
 
+const SIDEBAR_DASHBOARD = { to: '/admin/dashboard', labelKey: 'dashboard', Icon: IconDashboard };
+
+/** صفحة الإدارة (أدمن فقط)، بعد لوحة التحكم — بدون بنرات/باقات/اشتراكات (تظهر أسفل بوستات المجتمع) */
+const ADMIN_MANAGEMENT_NAV = [
+  { to: '/admin/users', labelKey: 'users', Icon: IconUsers, end: true },
+  { to: '/admin/doctors', labelKey: 'doctors', Icon: IconDoctors },
+  { to: '/admin/referrals', labelKey: 'referrals', Icon: IconReferrals },
+];
+
+/** أدمن فقط: بعد بوستات المجتمع */
+const ADMIN_BANNERS_PACKAGES_SUBS_NAV = [
+  { to: '/admin/banners', labelKey: 'banners', Icon: IconBanners },
+  { to: '/admin/packages', labelKey: 'packages', Icon: IconPackages },
+  { to: '/admin/subscriptions', labelKey: 'subscriptions', Icon: IconSubscriptions },
+];
+
+/** محتوى مشترك من الوجبات حتى بوستات المجتمع */
+const SIDEBAR_CONTENT_UNTIL_COMMUNITY = [
+  { to: '/admin/meals', labelKey: 'meals', Icon: IconMeals },
+  { to: '/admin/exercises', labelKey: 'exercises', Icon: IconExercises },
+  { to: '/admin/nutrition-plans', labelKey: 'nutritionPlans', Icon: IconNutritionPlans },
+  { to: '/admin/workout-plans', labelKey: 'workoutPlans', Icon: IconWorkoutPlans },
+  { to: '/admin/channels', labelKey: 'channels', Icon: IconChannels },
+  { to: '/admin/doctor-notes', labelKey: 'doctorNotes', Icon: IconDoctorNotes },
+  { to: '/admin/community-posts', labelKey: 'communityPosts', Icon: IconCommunityPosts },
+];
+
+const SIDEBAR_TAIL_NAV = [
+  { to: '/admin/notifications', labelKey: 'notifications', Icon: IconBell },
+  { to: '/admin/profile', labelKey: 'profile', Icon: IconProfile },
+];
+
 const navItems = (role) => {
-  const base = [
-    { to: '/admin/dashboard', labelKey: 'dashboard', Icon: IconDashboard },
-    { to: '/admin/meals', labelKey: 'meals', Icon: IconMeals },
-    { to: '/admin/exercises', labelKey: 'exercises', Icon: IconExercises },
-    { to: '/admin/nutrition-plans', labelKey: 'nutritionPlans', Icon: IconNutritionPlans },
-    { to: '/admin/workout-plans', labelKey: 'workoutPlans', Icon: IconWorkoutPlans },
-    { to: '/admin/channels', labelKey: 'channels', Icon: IconChannels },
-    { to: '/admin/doctor-notes', labelKey: 'doctorNotes', Icon: IconDoctorNotes },
-    { to: '/admin/community-posts', labelKey: 'communityPosts', Icon: IconCommunityPosts },
-    { to: '/admin/notifications', labelKey: 'notifications', Icon: IconBell },
-    { to: '/admin/profile', labelKey: 'profile', Icon: IconProfile },
-  ];
-  if (role === 'DOCTOR') {
-    return base;
+  if (role === 'ADMIN') {
+    return [
+      SIDEBAR_DASHBOARD,
+      ...ADMIN_MANAGEMENT_NAV,
+      ...SIDEBAR_CONTENT_UNTIL_COMMUNITY,
+      ...ADMIN_BANNERS_PACKAGES_SUBS_NAV,
+      ...SIDEBAR_TAIL_NAV,
+    ];
   }
-  // ADMIN
   return [
-    { to: '/admin/users', labelKey: 'users', Icon: IconUsers },
-    { to: '/admin/doctors', labelKey: 'doctors', Icon: IconDoctors },
-    { to: '/admin/referrals', labelKey: 'referrals', Icon: IconReferrals },
-    { to: '/admin/banners', labelKey: 'banners', Icon: IconBanners },
-    { to: '/admin/packages', labelKey: 'packages', Icon: IconPackages },
-    { to: '/admin/subscriptions', labelKey: 'subscriptions', Icon: IconSubscriptions },
-    ...base,
+    SIDEBAR_DASHBOARD,
+    { to: '/admin/patients', labelKey: 'patients', Icon: IconUsers, end: true },
+    { to: '/admin/doctor-chat', labelKey: 'doctorChat', Icon: IconDoctorChat },
+    ...SIDEBAR_CONTENT_UNTIL_COMMUNITY,
+    ...SIDEBAR_TAIL_NAV,
   ];
 };
 
@@ -217,6 +244,7 @@ export default function AdminLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end === true}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 transition-colors ${
                   !sidebarOpen ? 'justify-center' : ''
