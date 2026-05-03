@@ -3,7 +3,7 @@ const { success } = require('../../utils/response');
 const exerciseService = require('./exercise.service');
 
 const create = asyncHandler(async (req, res) => {
-  const exercise = await exerciseService.create(req.body, req.user);
+  const exercise = await exerciseService.create(req.body, req.user, req);
   success(res, exercise, 'Exercise created', 201);
 });
 
@@ -22,7 +22,7 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const update = asyncHandler(async (req, res) => {
-  const exercise = await exerciseService.update(req.params.id, req.body, req.user);
+  const exercise = await exerciseService.update(req.params.id, req.body, req.user, req);
   success(res, exercise, 'Exercise updated');
 });
 

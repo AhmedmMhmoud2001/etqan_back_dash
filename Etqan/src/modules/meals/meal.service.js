@@ -1,6 +1,17 @@
 const mealRepository = require('./meal.repository');
 const mealLogRepository = require('./mealLog.repository');
 const notificationService = require('../notifications/notification.service');
+const { normalizeStoredAssetUrl } = require('../../utils/publicAssetUrl');
+
+/** Persist absolute URLs when saving relative /uploads/... paths */
+const normalizeMealAssetUrls = (data, req) => {
+  if (!data || data.imageUrl === undefined) return data;
+  const out = { ...data };
+  const raw = out.imageUrl;
+  if (raw === null || raw === '') out.imageUrl = null;
+  else out.imageUrl = normalizeStoredAssetUrl(String(raw).trim(), { req }) || null;
+  return out;
+};
 
 const MEAL_TYPES = ['BREAKFAST', 'SNACK', 'LUNCH', 'DINNER'];
 
@@ -30,11 +41,16 @@ const getMealById = async (id) => {
   return meal;
 };
 
-const createMeal = async (data, userId) => {
-  const meal = await mealRepository.create({
-    ...data,
-    addedByUserId: userId,
-  });
+const createMeal = async (data, userId, req) => {
+  const meal = await mealRepository.create(
+    normalizeMealAssetUrls(
+      {
+        ...data,
+        addedByUserId: userId,
+      },
+      req
+    )
+  );
   notificationService.broadcast({
     title: 'وجبة جديدة',
     body: 'تم إضافة وجبة جديدة. تصفح قائمة الوجبات.',
@@ -44,7 +60,7 @@ const createMeal = async (data, userId) => {
   return meal;
 };
 
-const updateMeal = async (id, data, user) => {
+const updateMeal = async (id, data, user, req) => {
   const meal = await mealRepository.findById(id);
   if (!meal) {
     const err = new Error('Meal not found');
@@ -56,7 +72,7 @@ const updateMeal = async (id, data, user) => {
     err.statusCode = 403;
     throw err;
   }
-  const updated = await mealRepository.update(id, data);
+  const updated = await mealRepository.update(id, normalizeMealAssetUrls(data, req));
   notificationService.broadcast({
     title: 'تم تحديث وجبة',
     body: 'تم تحديث وجبة في قائمة الوجبات.',

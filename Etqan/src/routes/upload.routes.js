@@ -5,6 +5,7 @@ const fs = require('fs');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 const { success } = require('../utils/response');
+const { normalizeStoredAssetUrl } = require('../utils/publicAssetUrl');
 
 const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -49,7 +50,8 @@ router.post(
   },
   asyncHandler((req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'No image file' });
-    const url = `/uploads/${req.file.filename}`;
+    const relativePath = `/uploads/${req.file.filename}`;
+    const url = normalizeStoredAssetUrl(relativePath, { req });
     success(res, { url }, 'Image uploaded');
   })
 );

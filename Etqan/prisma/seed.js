@@ -9,6 +9,7 @@
  * - مريض:  marwa@etqan.com   / User@123  (كود إحالة: ETQAN2026)
  * - مريض:  patient2@etqan.com / User@123
  * - مريض:  patient3@etqan.com / User@123
+ * - مطور موبايل (QA — Premium، قناة، شات مع الدكتور، مجتمع): mobiledev@etqan.com / MobileDev@123
  */
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
@@ -495,6 +496,437 @@ async function main() {
     ],
   }).catch(() => {});
   console.log('Created sample notifications');
+
+  // ——— مستخدم مطور الموبايل (حساب QA كامل: Premium، بروفايل، قناة، شات، مجتمع) ———
+  const mobileDevEmail = 'mobiledev@etqan.com';
+  const premiumEndsAt = new Date();
+  premiumEndsAt.setFullYear(premiumEndsAt.getFullYear() + 1);
+  const yearlyPackage = await prisma.subscriptionPackage.findFirst({
+    where: { durationMonths: 12 },
+    select: { id: true },
+  });
+
+  const mobileDev = await prisma.user.upsert({
+    where: { email: mobileDevEmail },
+    update: {
+      name: 'مطور الموبايل',
+      role: 'USER',
+      emailVerified: true,
+      doctorId: doc1.id,
+      isActive: true,
+    },
+    create: {
+      email: mobileDevEmail,
+      password: hash('MobileDev@123'),
+      name: 'مطور الموبايل',
+      role: 'USER',
+      emailVerified: true,
+      doctorId: doc1.id,
+      referralCode: 'ETQANMOBDEV',
+    },
+  });
+
+  await prisma.subscription.upsert({
+    where: { userId: mobileDev.id },
+    update: {
+      plan: 'PREMIUM',
+      endsAt: premiumEndsAt,
+      startedAt: new Date(),
+      packageId: yearlyPackage?.id ?? null,
+      discountPercentToApply: 0,
+    },
+    create: {
+      userId: mobileDev.id,
+      plan: 'PREMIUM',
+      endsAt: premiumEndsAt,
+      startedAt: new Date(),
+      packageId: yearlyPackage?.id ?? null,
+      discountPercentToApply: 0,
+    },
+  });
+
+  await prisma.profile.upsert({
+    where: { userId: mobileDev.id },
+    update: {
+      measurementSystem: 'METRIC',
+      gender: 'MALE',
+      age: 31,
+      height: 178,
+      weight: 79,
+      activityLevel: 'MODERATE',
+      goal: 'MAINTAIN',
+      targetWeight: 76,
+      dietaryPreferences: ['HIGH_PROTEIN', 'LOW_CARB'],
+      allergies: [],
+      healthConditions: [],
+      notificationsEnabled: true,
+      darkMode: false,
+      language: 'ar',
+      imageUrl: null,
+    },
+    create: {
+      userId: mobileDev.id,
+      measurementSystem: 'METRIC',
+      gender: 'MALE',
+      age: 31,
+      height: 178,
+      weight: 79,
+      activityLevel: 'MODERATE',
+      goal: 'MAINTAIN',
+      targetWeight: 76,
+      dietaryPreferences: ['HIGH_PROTEIN', 'LOW_CARB'],
+      allergies: [],
+      healthConditions: [],
+      notificationsEnabled: true,
+      darkMode: false,
+      language: 'ar',
+      imageUrl: null,
+    },
+  });
+
+  await prisma.measurementBaseline.upsert({
+    where: { userId: mobileDev.id },
+    update: {
+      weight: 80,
+      bodyFat: 17.5,
+      muscleMass: 34,
+      water: 54,
+      waist: 84,
+    },
+    create: {
+      userId: mobileDev.id,
+      weight: 80,
+      bodyFat: 17.5,
+      muscleMass: 34,
+      water: 54,
+      waist: 84,
+    },
+  }).catch(() => {});
+
+  await prisma.measurementGoal.upsert({
+    where: { userId: mobileDev.id },
+    update: {
+      weight: 76,
+      bodyFat: 14,
+      muscleMass: 36,
+      water: 56,
+      waist: 78,
+    },
+    create: {
+      userId: mobileDev.id,
+      weight: 76,
+      bodyFat: 14,
+      muscleMass: 36,
+      water: 56,
+      waist: 78,
+    },
+  }).catch(() => {});
+
+  const devMeasCount = await prisma.measurement.count({ where: { userId: mobileDev.id } });
+  if (devMeasCount === 0) {
+    await prisma.measurement.createMany({
+      data: [
+        {
+          userId: mobileDev.id,
+          weight: 80,
+          bodyFat: 18,
+          muscleMass: 33.5,
+          water: 53,
+          waist: 85,
+          source: 'MANUAL',
+        },
+        {
+          userId: mobileDev.id,
+          weight: 79,
+          bodyFat: 17.8,
+          muscleMass: 34,
+          water: 54,
+          waist: 84,
+          source: 'MANUAL',
+        },
+      ],
+    }).catch(() => {});
+  }
+
+  /** شات الدكتورة سارة مع مطور الموبايل */
+  const qaConv = await prisma.conversation.upsert({
+    where: {
+      patientId_doctorId: { patientId: mobileDev.id, doctorId: doc1.id },
+    },
+    update: {},
+    create: {
+      patientId: mobileDev.id,
+      doctorId: doc1.id,
+    },
+  });
+  const qaChatExisting = await prisma.chatMessage.count({ where: { conversationId: qaConv.id } });
+  if (qaChatExisting === 0) {
+    await prisma.chatMessage.createMany({
+      data: [
+        {
+          conversationId: qaConv.id,
+          senderId: mobileDev.id,
+          content: 'مرحباً دكتورة، أستخدم حساب تجريبي لاختبار التطبيق وأريد تأكيد أن الخطة تظهر صح.',
+        },
+        {
+          conversationId: qaConv.id,
+          senderId: doctor1User.id,
+          content: 'أهلاً بك 👋 كل شيء مربوط بملفّك؛ إذا لاحظت أي اختلاف أخبرني.',
+        },
+        {
+          conversationId: qaConv.id,
+          senderId: mobileDev.id,
+          content: 'تمام، أتابع وأراجع القياسات من شاشة التقدّم.',
+        },
+      ],
+    });
+  }
+
+  /** رسائل في قناة المجتمع */
+  const communityCh = await prisma.channel.findFirst({
+    where: { OR: [{ name: 'مجتمع Etqan' }, { nameAr: 'مجتمع Etqan' }] },
+    select: { id: true },
+  });
+  if (communityCh) {
+    const chFromDev = await prisma.channelMessage.count({
+      where: { channelId: communityCh.id, senderId: mobileDev.id },
+    });
+    if (chFromDev === 0) {
+      await prisma.channelMessage.createMany({
+        data: [
+          {
+            channelId: communityCh.id,
+            senderId: mobileDev.id,
+            content: '👋 تجربة QA: هذا حساب مطور الموبايل على قناة المجتمع.',
+          },
+          {
+            channelId: communityCh.id,
+            senderId: doctor1User.id,
+            content: 'مرحباً في القناة! يمكنكم مشاركة التقدّم هنا للجميع.',
+          },
+        ],
+      });
+    }
+  }
+
+  /** منشورات، تعليق، إعجاب، مشاركة، متابعات */
+  const devPosts = await prisma.post.findMany({
+    where: { userId: mobileDev.id },
+    orderBy: { createdAt: 'asc' },
+    take: 2,
+    select: { id: true },
+  });
+  let postA = devPosts[0];
+  let postB = devPosts[1];
+  if (!postA) {
+    postA = await prisma.post.create({
+      data: {
+        userId: mobileDev.id,
+        content:
+          '📱 أسبوع أول مع Etqan — حساب مختبر لتطبيق الجوال؛ البيانات ظاهرة في البروفايل والقياس.',
+        badge: 'QA Week',
+      },
+    });
+  }
+  if (!postB) {
+    postB = await prisma.post.create({
+      data: {
+        userId: mobileDev.id,
+        content: 'اختبار المنشور الثاني مع صورة احتياطية نصّية بدون وسائط.',
+        badge: null,
+      },
+    });
+  }
+
+  const commented = await prisma.comment.findFirst({
+    where: { postId: postA.id, userId: patient2.id },
+  });
+  if (!commented) {
+    await prisma.comment.create({
+      data: {
+        postId: postA.id,
+        userId: patient2.id,
+        content: 'توفيق في التجربة 👍 المحتوى واضح من التطبيق.',
+      },
+    });
+  }
+
+  await prisma.postLike
+    .upsert({
+      where: { postId_userId: { postId: postA.id, userId: patient2.id } },
+      update: {},
+      create: { postId: postA.id, userId: patient2.id },
+    })
+    .catch(() => {});
+
+  let mohamedCommunityPost = await prisma.post.findFirst({
+    where: { userId: patient2.id },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!mohamedCommunityPost) {
+    mohamedCommunityPost = await prisma.post.create({
+      data: {
+        userId: patient2.id,
+        content: 'يوم ولياقة — نشارككم التقدّم للفريق ♥️',
+        badge: 'Day 5',
+      },
+    });
+  }
+  await prisma.postLike
+    .upsert({
+      where: { postId_userId: { postId: mohamedCommunityPost.id, userId: mobileDev.id } },
+      update: {},
+      create: { postId: mohamedCommunityPost.id, userId: mobileDev.id },
+    })
+    .catch(() => {});
+
+  const devShareExists = await prisma.postShare.findFirst({
+    where: { postId: mohamedCommunityPost.id, userId: mobileDev.id },
+  });
+  if (!devShareExists) {
+    await prisma.postShare
+      .create({
+        data: { postId: mohamedCommunityPost.id, userId: mobileDev.id },
+      })
+      .catch(() => {});
+  }
+
+  await prisma.follow
+    .upsert({
+      where: {
+        followerId_followingId: { followerId: mobileDev.id, followingId: patient1.id },
+      },
+      update: {},
+      create: { followerId: mobileDev.id, followingId: patient1.id },
+    })
+    .catch(() => {});
+
+  await prisma.follow
+    .upsert({
+      where: {
+        followerId_followingId: { followerId: patient2.id, followingId: mobileDev.id },
+      },
+      update: {},
+      create: { followerId: patient2.id, followingId: mobileDev.id },
+    })
+    .catch(() => {});
+
+  /** نشاط تمرين مكتمل (بسيط) */
+  const existingSess = await prisma.workoutSession.findFirst({
+    where: { userId: mobileDev.id, status: 'COMPLETED' },
+  });
+  if (!existingSess && ex1) {
+    const started = new Date(Date.now() - 2 * 86400000);
+    const ended = new Date(started.getTime() + 45 * 60 * 1000);
+    const session = await prisma.workoutSession.create({
+      data: {
+        userId: mobileDev.id,
+        startedAt: started,
+        endedAt: ended,
+        status: 'COMPLETED',
+      },
+    });
+    const wse = await prisma.workoutSessionExercise.create({
+      data: {
+        sessionId: session.id,
+        exerciseId: ex1.id,
+        order: 0,
+        sets: 3,
+        repMin: 8,
+        repMax: 12,
+        restSeconds: 90,
+      },
+    });
+    await prisma.workoutSessionSet.createMany({
+      data: [
+        {
+          workoutSessionExerciseId: wse.id,
+          setNumber: 1,
+          targetRepMin: 8,
+          targetRepMax: 12,
+          actualReps: 10,
+        },
+        {
+          workoutSessionExerciseId: wse.id,
+          setNumber: 2,
+          targetRepMin: 8,
+          targetRepMax: 12,
+          actualReps: 10,
+        },
+        {
+          workoutSessionExerciseId: wse.id,
+          setNumber: 3,
+          targetRepMin: 8,
+          targetRepMax: 12,
+          actualReps: 9,
+        },
+      ],
+    });
+  }
+
+  /** تسجيل وجبة • ملاحظة دكتور • بقالة • إشعار */
+  const devLogs = meal1
+    ? await prisma.userMealLog.count({ where: { userId: mobileDev.id, mealId: meal1.id } })
+    : 1;
+  if (meal1 && devLogs === 0) {
+    await prisma.userMealLog
+      .create({
+        data: {
+          userId: mobileDev.id,
+          mealId: meal1.id,
+          eatenAt: new Date(),
+        },
+      })
+      .catch(() => {});
+  }
+
+  const noteExists = await prisma.doctorNote.findFirst({
+    where: { doctorId: doc1.id, patientId: mobileDev.id },
+    select: { id: true },
+  });
+  if (!noteExists) {
+    await prisma.doctorNote.create({
+      data: {
+        doctorId: doc1.id,
+        patientId: mobileDev.id,
+        content:
+          'حساب اختبار (مطور الموبايل): راقب مزامنة الشات الخاص والقنوات؛ يمكن إنشاء خطط غذائية/تمارين من لوحة الطبيب عند الحاجة.',
+      },
+    });
+  }
+
+  const groceriesCount = await prisma.groceryItem.count({ where: { userId: mobileDev.id } });
+  if (groceriesCount === 0) {
+    await prisma.groceryItem
+      .createMany({
+        data: [
+          { userId: mobileDev.id, name: 'بيض كامل', quantity: '15', checked: true, order: 0 },
+          { userId: mobileDev.id, name: 'شوفان', quantity: '1 kg', checked: false, order: 1 },
+          { userId: mobileDev.id, name: 'زبادي يوناني', quantity: '6 قطع', checked: false, order: 2 },
+        ],
+      })
+      .catch(() => {});
+  }
+
+  const qaNotifExists = await prisma.notification.findFirst({
+    where: { userId: mobileDev.id, title: 'Etqan QA' },
+    select: { id: true },
+  });
+  if (!qaNotifExists) {
+    await prisma.notification
+      .create({
+        data: {
+          userId: mobileDev.id,
+          title: 'Etqan QA',
+          body: 'تم تجهيز بيانات الاختبار: Premium، الشات مع الدكتور، قناة المجتمع، والمنشورات.',
+          type: 'INFO',
+          read: false,
+        },
+      })
+      .catch(() => {});
+  }
+
+  console.log('Created QA user (mobile developer):', mobileDevEmail);
 
   console.log('✅ Seed completed.');
 }

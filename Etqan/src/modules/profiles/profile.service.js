@@ -1,5 +1,6 @@
 const profileRepository = require('./profile.repository');
 const enums = require('../../config/profileEnums');
+const { normalizeStoredAssetUrl } = require('../../utils/publicAssetUrl');
 
 const getByUserId = async (userId) => {
   const profile = await profileRepository.findByUserId(userId);
@@ -17,12 +18,12 @@ const ensureArrayOfStrings = (val) => {
   return arr.every((x) => typeof x === 'string') ? arr : null;
 };
 
-const createOrUpdate = async (userId, data) => {
+const createOrUpdate = async (userId, data, req) => {
   const payload = {};
 
   if (data.imageUrl !== undefined) {
     const url = data.imageUrl === null || data.imageUrl === '' ? null : String(data.imageUrl).trim();
-    payload.imageUrl = url || null;
+    payload.imageUrl = url ? normalizeStoredAssetUrl(url, { req }) : null;
   }
   if (data.measurementSystem != null) {
     if (!enums.measurementSystem.includes(data.measurementSystem)) {

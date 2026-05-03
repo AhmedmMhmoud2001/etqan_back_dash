@@ -31,6 +31,8 @@ const bannersRoutes = require('./routes/banners.routes');
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
 const app = express();
+// Avoid 304 + empty body on API GETs (Express default ETag can confuse fetch/json on revalidation)
+app.disable('etag');
 
 app.use(cors());
 app.use(express.json());
@@ -51,6 +53,13 @@ const swaggerNoCache = (req, res, next) => {
   res.set('Expires', '0');
   next();
 };
+const sendOpenApiJson = (doc) => (req, res) => {
+  res.type('application/json');
+  res.send(doc);
+};
+// OpenAPI JSON for Postman import (Import → Link or file from scripts/openapi:export)
+app.get('/openapi.json', swaggerNoCache, sendOpenApiJson(swaggerMobileDocument));
+app.get('/openapi-admin.json', swaggerNoCache, sendOpenApiJson(swaggerDocument));
 const swaggerUiMobileOpts = {
   customSiteTitle: 'Etqan API Docs (Mobile)',
   customCss: '.swagger-ui .topbar { display: none }',
@@ -71,6 +80,14 @@ app.use(
   ...swaggerUi.serveFiles(swaggerDocument, swaggerUiAdminOpts),
   swaggerUi.setup(swaggerDocument, swaggerUiAdminOpts)
 );
+
+// API: no browser/CDN caching for JSON (dev + admin lists like ?page=&limit=)
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 // API routes
 app.use('/api/auth', authRoutes);

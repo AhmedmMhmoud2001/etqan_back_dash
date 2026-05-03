@@ -1,6 +1,16 @@
 const { prisma } = require('../../prisma/client');
 const exerciseRepository = require('./exercise.repository');
 const notificationService = require('../notifications/notification.service');
+const { normalizeStoredAssetUrl } = require('../../utils/publicAssetUrl');
+
+const normalizeExerciseUrls = (data, req) => {
+  if (!data || data.imageUrl === undefined) return data;
+  const out = { ...data };
+  const raw = out.imageUrl;
+  if (raw === null || raw === '') out.imageUrl = null;
+  else out.imageUrl = normalizeStoredAssetUrl(String(raw).trim(), { req }) || null;
+  return out;
+};
 
 const getDoctorIdForUser = async (user) => {
   if (user.role !== 'DOCTOR') return null;
@@ -9,16 +19,21 @@ const getDoctorIdForUser = async (user) => {
 };
 
 /** الأدمن أو الدكتور فقط يضيف التمارين */
-const create = async (data, user) => {
+const create = async (data, user, req) => {
   if (user.role !== 'ADMIN' && user.role !== 'DOCTOR') {
     const err = new Error('Only admin or doctor can add exercises');
     err.statusCode = 403;
     throw err;
   }
-  return exerciseRepository.create({
-    ...data,
-    addedByUserId: user.id,
-  });
+  return exerciseRepository.create(
+    normalizeExerciseUrls(
+      {
+        ...data,
+        addedByUserId: user.id,
+      },
+      req
+    )
+  );
 };
 
 const getById = async (id) => {
@@ -40,7 +55,7 @@ const list = async (filters = {}, user) => {
   return exerciseRepository.findMany(opts);
 };
 
-const update = async (id, data, user) => {
+const update = async (id, data, user, req) => {
   const exercise = await exerciseRepository.findById(id);
   if (!exercise) {
     const err = new Error('Exercise not found');
@@ -52,7 +67,7 @@ const update = async (id, data, user) => {
     err.statusCode = 403;
     throw err;
   }
-  const updated = await exerciseRepository.update(id, data);
+  const updated = await exerciseRepository.update(id, normalizeExerciseUrls(data, req));
   notificationService.broadcast({
     title: 'تم تحديث تمرين',
     body: 'تم تحديث تمرين في قائمة التمارين.',

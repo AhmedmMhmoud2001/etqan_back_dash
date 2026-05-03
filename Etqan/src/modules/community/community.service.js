@@ -6,6 +6,7 @@ const shareRepository = require('./share.repository');
 const followRepository = require('./follow.repository');
 const notificationService = require('../notifications/notification.service');
 const { shouldRemoveMessage } = require('../../utils/moderation');
+const { normalizeStoredAssetUrl } = require('../../utils/publicAssetUrl');
 
 const formatPost = (post, currentUserId = null) => {
   if (!post) return null;
@@ -47,7 +48,7 @@ const getPostById = async (id, currentUserId = null) => {
   return formatPost(post, currentUserId);
 };
 
-const createPost = async (userId, data) => {
+const createPost = async (userId, data, req) => {
   if (!data.content || !data.content.trim()) {
     const err = new Error('Content is required');
     err.statusCode = 400;
@@ -56,10 +57,11 @@ const createPost = async (userId, data) => {
   if (shouldRemoveMessage(data.content)) {
     return { removed: true };
   }
+  const img = data.imageUrl ? String(data.imageUrl).trim() : '';
   const post = await postRepository.create({
     userId,
     content: data.content.trim(),
-    imageUrl: data.imageUrl || null,
+    imageUrl: img ? normalizeStoredAssetUrl(img, { req }) : null,
     badge: data.badge || null,
   });
   notificationService.broadcast({
@@ -71,7 +73,7 @@ const createPost = async (userId, data) => {
   return formatPost(post, userId);
 };
 
-const updatePost = async (postId, userId, data) => {
+const updatePost = async (postId, userId, data, req) => {
   const post = await postRepository.findById(postId);
   if (!post) {
     const err = new Error('Post not found');
@@ -97,7 +99,10 @@ const updatePost = async (postId, userId, data) => {
     }
     payload.content = c;
   }
-  if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl || null;
+  if (data.imageUrl !== undefined) {
+    const raw = data.imageUrl == null ? '' : String(data.imageUrl).trim();
+    payload.imageUrl = raw ? normalizeStoredAssetUrl(raw, { req }) : null;
+  }
   if (data.badge !== undefined) payload.badge = data.badge || null;
   const updated = await postRepository.update(postId, payload);
   notificationService.broadcast({

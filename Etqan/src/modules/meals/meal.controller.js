@@ -16,12 +16,12 @@ const getById = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const meal = await mealService.createMeal(req.body, req.user.id);
+  const meal = await mealService.createMeal(req.body, req.user.id, req);
   success(res, meal, 'Meal created', 201);
 });
 
 const update = asyncHandler(async (req, res) => {
-  const meal = await mealService.updateMeal(req.params.id, req.body, req.user);
+  const meal = await mealService.updateMeal(req.params.id, req.body, req.user, req);
   success(res, meal, 'Meal updated');
 });
 

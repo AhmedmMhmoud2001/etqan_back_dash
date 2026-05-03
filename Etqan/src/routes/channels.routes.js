@@ -10,11 +10,11 @@ const router = express.Router();
 router.get('/', asyncHandler(channelController.listChannels));
 router.get('/:id', channelValidator.channelIdParam(), channelValidator.validate, asyncHandler(channelController.getChannel));
 
-// رسائل القناة وإرسال رسالة (يتطلب تسجيل دخول — مستخدم أو دكتور)
+// رسائل القناة وإرسال رسالة (مستخدم Premium أو دكتور/أدمن للإشراف)
 router.get(
   '/:id/messages',
   authenticate,
-  authorize('USER', 'DOCTOR'),
+  authorize('USER', 'DOCTOR', 'ADMIN'),
   requirePremium,
   channelValidator.channelIdParam(),
   channelValidator.validate,
@@ -23,7 +23,7 @@ router.get(
 router.post(
   '/:id/messages',
   authenticate,
-  authorize('USER', 'DOCTOR'),
+  authorize('USER', 'DOCTOR', 'ADMIN'),
   requirePremium,
   channelValidator.sendMessageRules(),
   channelValidator.validate,

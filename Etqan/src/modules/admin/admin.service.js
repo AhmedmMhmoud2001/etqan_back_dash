@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const adminRepository = require('./admin.repository');
 const notificationService = require('../notifications/notification.service');
 const profileService = require('../profiles/profile.service');
+const baselineGoalService = require('../measurements/baselineGoal.service');
 const { pickDoctorWithLeastPatients } = require('../../utils/doctorAssignment');
 
 const sanitizeUser = (user) => {
@@ -26,8 +27,11 @@ const getUserById = async (id) => {
     err.statusCode = 404;
     throw err;
   }
-  const stats = await adminRepository.getStatsForUser(id);
-  return { ...sanitizeUser(user), stats };
+  const [stats, measurementProgress] = await Promise.all([
+    adminRepository.getStatsForUser(id),
+    baselineGoalService.getSummary(id),
+  ]);
+  return { ...sanitizeUser(user), stats, measurementProgress };
 };
 
 const createUser = async (data) => {
@@ -83,14 +87,14 @@ const updateUser = async (id, data) => {
   return sanitizeUser(updated);
 };
 
-const updateUserProfile = async (userId, data) => {
+const updateUserProfile = async (userId, data, req) => {
   const user = await adminRepository.findUserById(userId);
   if (!user) {
     const err = new Error('User not found');
     err.statusCode = 404;
     throw err;
   }
-  return profileService.createOrUpdate(userId, data);
+  return profileService.createOrUpdate(userId, data, req);
 };
 
 const deleteUser = async (id) => {
@@ -260,6 +264,10 @@ const getWorkoutSessionsForUser = async (userId, limit = 30) => {
   return adminRepository.getWorkoutSessionsForUser(userId, limit);
 };
 
+const getMeasurementsForUser = async (userId, limit = 60) => {
+  return adminRepository.getMeasurementsForUser(userId, limit);
+};
+
 const listAllDoctorNotes = async (doctorId = null, patientId = null, page = 1, limit = 200) => {
   const skip = (Math.max(1, page) - 1) * limit;
   return adminRepository.listAllDoctorNotes({
@@ -303,6 +311,7 @@ module.exports = {
   listAllNutritionPlans,
   listAllWorkoutPlans,
   getWorkoutSessionsForUser,
+  getMeasurementsForUser,
   listAllDoctorNotes,
   listAllCommunityPosts,
   deleteCommunityPost,

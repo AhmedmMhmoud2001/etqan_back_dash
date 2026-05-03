@@ -58,17 +58,20 @@ const findById = async (id) => {
 };
 
 const findCurrentByUserId = async (userId, atDate = new Date()) => {
-  const day = new Date(atDate);
-  day.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(day);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
+  const dayStart = new Date(atDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setHours(23, 59, 59, 999);
+  // Admin UI saves weekStart/weekEnd as local noon → ISO (often mid-day UTC). Comparing only
+  // to midnight `day` breaks when weekStart on the same calendar day is still after 00:00 UTC.
+  // Overlap rule: plan interval [weekStart, weekEnd] intersects calendar day [dayStart, dayEnd].
   return prisma.userWeeklyPlan.findFirst({
     where: {
       userId,
-      weekStart: { lte: day },
-      weekEnd: { gte: day },
+      weekStart: { lte: dayEnd },
+      weekEnd: { gte: dayStart },
     },
+    orderBy: { weekStart: 'desc' },
     include: {
       doctor: { include: { user: { select: { id: true, name: true } } } },
       days: daysInclude,

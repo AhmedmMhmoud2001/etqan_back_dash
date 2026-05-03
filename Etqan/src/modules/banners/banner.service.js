@@ -1,4 +1,5 @@
 const repo = require('./banner.repository');
+const { normalizeStoredAssetUrl } = require('../../utils/publicAssetUrl');
 
 const toDateOrNull = (v) => {
   if (v == null || v === '') return null;
@@ -14,8 +15,9 @@ const listActive = async () => {
   return { items };
 };
 
-const create = async (body) => {
-  const imageUrl = String(body.imageUrl || '').trim();
+const create = async (body, req) => {
+  const imageUrlRaw = String(body.imageUrl || '').trim();
+  const imageUrl = imageUrlRaw ? normalizeStoredAssetUrl(imageUrlRaw, { req }) : '';
   if (!imageUrl) {
     const err = new Error('imageUrl is required');
     err.statusCode = 400;
@@ -50,7 +52,7 @@ const create = async (body) => {
   });
 };
 
-const update = async (id, body) => {
+const update = async (id, body, req) => {
   const existing = await repo.findById(id);
   if (!existing) {
     const err = new Error('Banner not found');
@@ -64,7 +66,10 @@ const update = async (id, body) => {
   if (body.description != null) data.description = String(body.description).trim() || null;
   if (body.descriptionAr != null) data.descriptionAr = String(body.descriptionAr).trim() || null;
   if (body.descriptionIt != null) data.descriptionIt = String(body.descriptionIt).trim() || null;
-  if (body.imageUrl != null) data.imageUrl = String(body.imageUrl).trim();
+  if (body.imageUrl != null) {
+    const raw = String(body.imageUrl).trim();
+    data.imageUrl = raw ? normalizeStoredAssetUrl(raw, { req }) : '';
+  }
   if (body.link != null) data.link = String(body.link).trim() || null;
   if (body.order != null) data.order = Number(body.order);
   if (body.isActive != null) data.isActive = Boolean(body.isActive);

@@ -361,6 +361,77 @@ const swaggerDocument = {
         responses: { 200: { description: 'Paginated doctors' }, 401: { description: 'Unauthorized' } },
       },
     },
+    '/doctors/me/patients/{patientId}/workout-sessions': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'Doctor: workout sessions for assigned patient',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'patientId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 30, maximum: 50 } },
+        ],
+        responses: {
+          200: { description: '{ data: { sessions } }' },
+          401: {},
+          403: {},
+          404: {},
+        },
+      },
+    },
+    '/doctors/me/patients/{patientId}/measurements': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'Doctor: measurements list for assigned patient',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'patientId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 60, maximum: 100 } },
+        ],
+        responses: { 200: { description: '{ data: { measurements } }' }, 401: {}, 403: {}, 404: {} },
+      },
+    },
+    '/doctors/me/patients/{patientId}/stats': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'Doctor: aggregated stats for an assigned patient (counts + baseline/goal progress)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'patientId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: '{ data: { patient, stats, measurementProgress } }' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not a doctor account' },
+          404: { description: 'Patient not found or not assigned to this doctor' },
+        },
+      },
+    },
+    '/doctors/me/patients/{patientId}/conversation': {
+      post: {
+        tags: ['Doctors'],
+        summary: 'Doctor: create or reopen 1:1 conversation with assigned patient',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'patientId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Conversation payload (same as chat list items)' },
+          401: {},
+          403: {},
+          404: {},
+        },
+      },
+    },
+    '/doctors/me/patients/{patientId}': {
+      get: {
+        tags: ['Doctors'],
+        summary: 'Doctor: full patient record (assigned only) — profile + stats + measurementProgress',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'patientId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'User-shaped payload with stats & measurementProgress' },
+          401: {},
+          403: {},
+          404: {},
+        },
+      },
+    },
     '/doctors/{id}': {
       get: {
         tags: ['Doctors'],
@@ -430,13 +501,35 @@ const swaggerDocument = {
         responses: { 201: { description: 'User created' }, 400: { description: 'Validation error' }, 403: { description: 'Admin only' }, 409: { description: 'Email exists' } },
       },
     },
+    '/admin/users/{id}/measurements': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List body measurements for a user (newest first)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 60, maximum: 100 } },
+        ],
+        responses: {
+          200: { description: '{ data: { measurements } }' },
+          403: { description: 'Admin only' },
+        },
+      },
+    },
     '/admin/users/{id}': {
       get: {
         tags: ['Admin'],
         summary: 'Get user by id',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'User' }, 403: { description: 'Admin only' }, 404: { description: 'Not found' } },
+        responses: {
+          200: {
+            description:
+              'User with profile, doctor, stats (counts + latestMeasurement), measurementProgress: { baseline, goal, current, metrics } (per metric: start, current, goal, deltaFromStart, progressPercent)',
+          },
+          403: { description: 'Admin only' },
+          404: { description: 'Not found' },
+        },
       },
       patch: {
         tags: ['Admin'],
@@ -813,7 +906,7 @@ const swaggerDocument = {
     '/channels/{id}/messages': {
       get: {
         tags: ['Channels'],
-        summary: 'List channel messages',
+        summary: 'List channel messages (USER with Premium, DOCTOR, ADMIN)',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
@@ -821,11 +914,16 @@ const swaggerDocument = {
           { name: 'limit', in: 'query', schema: { type: 'integer' } },
           { name: 'before', in: 'query', schema: { type: 'string', format: 'date-time' } },
         ],
-        responses: { 200: { description: 'items, total, page, limit' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+        responses: {
+          200: { description: 'items, total, page, limit' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Premium required (USER)' },
+          404: { description: 'Not found' },
+        },
       },
       post: {
         tags: ['Channels'],
-        summary: 'Send message to channel (user or doctor)',
+        summary: 'Send message to channel (USER with Premium, DOCTOR, ADMIN)',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
@@ -842,7 +940,13 @@ const swaggerDocument = {
             },
           },
         },
-        responses: { 201: { description: 'Message sent' }, 400: { description: 'Content or attachment required' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+        responses: {
+          201: { description: 'Message sent' },
+          400: { description: 'Content or attachment required' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Premium required (USER)' },
+          404: { description: 'Not found' },
+        },
       },
     },
     '/admin/channels': {
@@ -2136,10 +2240,19 @@ const swaggerDocument = {
         tags: ['Dashboard'],
         summary: 'Home dashboard: body composition, weekly adherence (nutrition + workouts), goal progress, today summary, doctor note',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'date', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Optional date for "today"' }],
+        parameters: [
+          {
+            name: 'date',
+            in: 'query',
+            schema: { type: 'string', format: 'date', example: '2026-05-03' },
+            description:
+              'Optional calendar day for “today” (server-local TZ). Prefer ISO date only `YYYY-MM-DD` — avoids UTC shifts in responses.',
+          },
+        ],
         responses: {
           200: {
-            description: 'bodyComposition (current, changes), weeklyAdherence (nutrition, workouts, overallPercent), goalProgress (currentWeightKg, targetWeightKg, remainingKg, estimatedReachDate, weeklyTrendKg), todaySummary (date, calories, workouts), doctorNote (content, createdAt, doctor, source)',
+            description:
+              'bodyComposition (current, changes), weeklyAdherence: nutrition (plan, days), workouts (percent, plan id/weekStart/weekEnd/doctor, days[] with exercise + sets/reps + completed, completedDays, totalDays), goalProgress, todaySummary, doctorNote',
           },
           401: { description: 'Unauthorized' },
         },
@@ -2206,7 +2319,7 @@ const swaggerDocument = {
           },
         },
         responses: {
-          200: { description: 'Returns { url: /uploads/<file> }' },
+          200: { description: 'Returns { url: absolute https URL } when PUBLIC_BASE_URL or Host is known; otherwise relative /uploads/<file>' },
           400: { description: 'Invalid file / too large (max 5MB)' },
           401: { description: 'Unauthorized' },
         },

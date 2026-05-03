@@ -13,12 +13,12 @@ const listAdmin = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const data = await service.create(req.body);
+  const data = await service.create(req.body, req);
   success(res, data, 'Banner created', 201);
 });
 
 const update = asyncHandler(async (req, res) => {
-  const data = await service.update(req.params.id, req.body);
+  const data = await service.update(req.params.id, req.body, req);
   success(res, data, 'Banner updated');
 });
 

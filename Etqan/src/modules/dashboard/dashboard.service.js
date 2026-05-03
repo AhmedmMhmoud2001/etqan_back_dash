@@ -6,6 +6,41 @@ const mealLogRepository = require('../meals/mealLog.repository');
 const doctorNoteRepository = require('../doctorNote/doctorNote.repository');
 const measurementRepository = require('../measurements/measurement.repository');
 
+/** YYYY-MM-DD for the machine-local calendar day (toISOString() is UTC and shifts the day). */
+const formatLocalDateString = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+/**
+ * Optional ?date= — calendar day in local TZ. Prefer YYYY-MM-DD to avoid UTC-only quirks.
+ */
+const parseDashboardCalendarDay = (raw) => {
+  const startOfLocalDay = (dt) => {
+    const cal = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    cal.setHours(0, 0, 0, 0);
+    return cal;
+  };
+  if (raw == null || raw === '') return startOfLocalDay(new Date());
+  const s = String(raw).trim();
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s]|$)/.exec(s);
+  if (ymd) {
+    const y = Number(ymd[1]);
+    const mo = Number(ymd[2]);
+    const d = Number(ymd[3]);
+    const dt = new Date(y, mo - 1, d);
+    if (!Number.isNaN(dt.getTime()) && dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d) {
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    }
+  }
+  const parsed = new Date(s);
+  if (Number.isNaN(parsed.getTime())) return startOfLocalDay(new Date());
+  return startOfLocalDay(parsed);
+};
+
 /** آخر رسالة من الدكتور في الشات (fallback لو مفيش DoctorNote) */
 const getLastDoctorChatMessage = async (userId) => {
   const user = await prisma.user.findUnique({
@@ -19,7 +54,7 @@ const getLastDoctorChatMessage = async (userId) => {
   });
   if (!doc) return null;
   const conv = await prisma.conversation.findUnique({
-    where: { patientId: userId, doctorId: user.doctorId },
+    where: { patientId_doctorId: { patientId: userId, doctorId: user.doctorId } },
     select: { id: true },
   });
   if (!conv) return null;
@@ -63,8 +98,7 @@ const getEstimatedReachDate = async (userId) => {
 };
 
 const getDashboard = async (userId, date = null) => {
-  const today = date ? new Date(date) : new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = parseDashboardCalendarDay(date);
   const todayEnd = new Date(today);
   todayEnd.setHours(23, 59, 59, 999);
 
@@ -99,10 +133,35 @@ const getDashboard = async (userId, date = null) => {
   let workoutAdherence = null;
   if (workoutPlan) {
     const wp = await userWeeklyPlanService.getWeeklyProgress(userId, workoutPlan.id);
+    const workoutDays = (wp.days || []).map((d) => ({
+      id: d.id,
+      date: formatLocalDateString(new Date(d.date)),
+      exercise: d.exercise
+        ? {
+            id: d.exercise.id,
+            name: d.exercise.name,
+            nameAr: d.exercise.nameAr,
+            nameIt: d.exercise.nameIt,
+            imageUrl: d.exercise.imageUrl,
+          }
+        : null,
+      sets: d.sets,
+      repMin: d.repMin,
+      repMax: d.repMax,
+      order: d.order,
+      completed: d.completed,
+    }));
     workoutAdherence = {
       completedDays: wp.completedCount,
       totalDays: wp.totalDays,
       percent: wp.totalDays ? Math.round((wp.completedCount / wp.totalDays) * 100) : 0,
+      plan: {
+        id: workoutPlan.id,
+        weekStart: workoutPlan.weekStart,
+        weekEnd: workoutPlan.weekEnd,
+        doctor: workoutPlan.doctor,
+      },
+      days: workoutDays,
     };
   }
 
@@ -173,7 +232,7 @@ const getDashboard = async (userId, date = null) => {
       onTrack: estimatedGoalData?.onTrack ?? null,
     },
     todaySummary: {
-      date: today.toISOString().slice(0, 10),
+      date: formatLocalDateString(today),
       calories: {
         consumed: todayNutrition?.consumed?.totalCalories ?? 0,
         goal: todayNutrition?.targets?.dailyCalorieTarget ?? null,

@@ -23,6 +23,7 @@ router.get('/dashboard', asyncHandler(adminController.getDashboard));
 // Users CRUD
 router.get('/users', asyncHandler(adminController.listUsers));
 router.get('/users/:id/workout-sessions', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.getUserWorkoutSessions));
+router.get('/users/:id/measurements', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.getUserMeasurements));
 router.get('/users/:id', adminValidator.idParamRules('id'), adminValidator.validate, asyncHandler(adminController.getUserById));
 router.post('/users', adminValidator.createUserRules(), adminValidator.validate, asyncHandler(adminController.createUser));
 router.patch('/users/:id/profile', profileValidator.updateProfileRules(), profileValidator.validate, asyncHandler(adminController.updateUserProfile));

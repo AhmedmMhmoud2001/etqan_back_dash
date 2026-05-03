@@ -2,6 +2,20 @@ const { prisma } = require('../../prisma/client');
 const conversationRepository = require('./conversation.repository');
 const messageRepository = require('./message.repository');
 const { shouldRemoveMessage } = require('../../utils/moderation');
+const { premiumSubscriptionActive } = require('../../utils/premiumSubscriptionActive');
+
+const decoratePatientForChat = (patient) => {
+  if (!patient) return patient;
+  return {
+    ...patient,
+    isPremiumActive: premiumSubscriptionActive(patient.subscription),
+  };
+};
+
+const decorateConversation = (conv) => {
+  if (!conv) return conv;
+  return { ...conv, patient: decoratePatientForChat(conv.patient) };
+};
 
 const formatMessage = (msg) => {
   if (!msg) return null;
@@ -20,12 +34,13 @@ const getMyConversations = async (userId, role) => {
       return { items: [], total: 0 };
     }
     const conv = await conversationRepository.findOrCreateByPatientAndDoctor(userId, user.doctorId);
-    return { items: [conv], total: 1 };
+    return { items: [decorateConversation(conv)], total: 1 };
   }
   if (role === 'DOCTOR') {
     const doctor = await prisma.doctor.findUnique({ where: { userId } });
     if (!doctor) return { items: [], total: 0 };
-    const items = await conversationRepository.findByDoctorId(doctor.id);
+    const raw = await conversationRepository.findByDoctorId(doctor.id);
+    const items = raw.map(decorateConversation);
     return { items, total: items.length };
   }
   return { items: [], total: 0 };
@@ -48,7 +63,7 @@ const getConversationById = async (conversationId, userId) => {
     err.statusCode = 403;
     throw err;
   }
-  return conv;
+  return decorateConversation(conv);
 };
 
 const getOrCreateMyConversation = async (userId) => {
@@ -66,7 +81,9 @@ const getOrCreateMyConversation = async (userId) => {
     err.statusCode = 400;
     throw err;
   }
-  return conversationRepository.findOrCreateByPatientAndDoctor(userId, user.doctorId);
+  return decorateConversation(
+    await conversationRepository.findOrCreateByPatientAndDoctor(userId, user.doctorId)
+  );
 };
 
 const getMessages = async (conversationId, userId, page = 1, limit = 50, before) => {
@@ -103,7 +120,16 @@ const sendMessage = async (conversationId, userId, data) => {
   const formatted = formatMessage(msg);
   try {
     const socketService = require('../../socket');
-    socketService.emitChatMessage(conv.patientId, conv.doctorId, conversationId, formatted);
+    // conv.doctorId = Doctor.id؛ غرف Socket مربوطة بـ User.id
+    let doctorUserId = conv.doctor?.user?.id;
+    if (!doctorUserId && conv.doctorId) {
+      const row = await prisma.doctor.findUnique({
+        where: { id: conv.doctorId },
+        select: { userId: true },
+      });
+      doctorUserId = row?.userId;
+    }
+    if (doctorUserId) socketService.emitChatMessage(conv.patientId, doctorUserId, conversationId, formatted);
   } catch (_) { /* Socket may not be initialized */ }
   return formatted;
 };

@@ -8,7 +8,7 @@ const getMyProfile = asyncHandler(async (req, res) => {
 });
 
 const updateMyProfile = asyncHandler(async (req, res) => {
-  const profile = await profileService.createOrUpdate(req.user.id, req.body);
+  const profile = await profileService.createOrUpdate(req.user.id, req.body, req);
   success(res, profile, 'Profile updated');
 });
 

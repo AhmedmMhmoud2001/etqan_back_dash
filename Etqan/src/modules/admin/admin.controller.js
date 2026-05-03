@@ -28,6 +28,12 @@ const getUserWorkoutSessions = asyncHandler(async (req, res) => {
   success(res, { sessions }, 'User workout sessions');
 });
 
+const getUserMeasurements = asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 60, 100);
+  const measurements = await adminService.getMeasurementsForUser(req.params.id, limit);
+  success(res, { measurements }, 'User measurements');
+});
+
 const createUser = asyncHandler(async (req, res) => {
   const user = await adminService.createUser(req.body);
   success(res, user, 'User created', 201);
@@ -132,7 +138,7 @@ const deleteCommunityPost = asyncHandler(async (req, res) => {
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
-  const profile = await adminService.updateUserProfile(req.params.id, req.body);
+  const profile = await adminService.updateUserProfile(req.params.id, req.body, req);
   success(res, profile, 'User profile updated');
 });
 
@@ -141,6 +147,7 @@ module.exports = {
   listUsers,
   getUserById,
   getUserWorkoutSessions,
+  getUserMeasurements,
   createUser,
   updateUser,
   deleteUser,

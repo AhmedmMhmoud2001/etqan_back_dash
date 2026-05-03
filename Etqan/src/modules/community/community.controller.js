@@ -22,13 +22,13 @@ const getPost = asyncHandler(async (req, res) => {
 });
 
 const createPost = asyncHandler(async (req, res) => {
-  const post = await communityService.createPost(req.user.id, req.body);
+  const post = await communityService.createPost(req.user.id, req.body, req);
   if (post && post.removed) return success(res, post, 'Removed', 200);
   success(res, post, 'Post created', 201);
 });
 
 const updatePost = asyncHandler(async (req, res) => {
-  const post = await communityService.updatePost(req.params.id, req.user.id, req.body);
+  const post = await communityService.updatePost(req.params.id, req.user.id, req.body, req);
   success(res, post, 'Post updated');
 });
 

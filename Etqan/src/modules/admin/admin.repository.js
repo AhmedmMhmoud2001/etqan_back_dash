@@ -306,6 +306,15 @@ const getWorkoutSessionsForUser = async (userId, limit = 30) => {
   });
 };
 
+const getMeasurementsForUser = async (userId, limit = 60) => {
+  const take = Math.min(Math.max(Number(limit) || 60, 1), 100);
+  return prisma.measurement.findMany({
+    where: { userId },
+    take,
+    orderBy: { measuredAt: 'desc' },
+  });
+};
+
 const listAllDoctorNotes = async (params = {}) => {
   const { doctorId, patientId, skip = 0, take = 200 } = params;
   const where = {};
@@ -371,6 +380,7 @@ module.exports = {
   listAllNutritionPlans,
   listAllWorkoutPlans,
   getWorkoutSessionsForUser,
+  getMeasurementsForUser,
   listAllDoctorNotes,
   listAllCommunityPosts,
   deleteCommunityPost,
