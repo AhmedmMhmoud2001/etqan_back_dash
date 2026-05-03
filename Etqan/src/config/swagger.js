@@ -1,4 +1,29 @@
-const config = require('./index');
+require('./index'); // loads dotenv via config/index before reading process.env below
+
+/** Base URL without trailing slash */
+function normalizeBase(url) {
+  if (!url || typeof url !== 'string') return null;
+  return url.replace(/\/+$/, '');
+}
+
+// Servers in Swagger/OpenAPI/postman-import: fixed “doc” URLs, not the runtime PORT —
+// Otherwise hosting on PORT=5003 wrongly shows localhost:5003 as “Local”.
+const swaggerLocalUrl =
+  process.env.SWAGGER_LOCAL_URL ||
+  `http://localhost:${parseInt(process.env.SWAGGER_LOCAL_PORT, 10) || 3000}/api`;
+
+const publicBase = normalizeBase(process.env.PUBLIC_BASE_URL);
+const isLocalPublicBase =
+  !publicBase || /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(publicBase.replace(/^https?:\/\//i, '').split('/')[0]);
+let swaggerProdUrl = normalizeBase(process.env.SWAGGER_PROD_URL);
+if (!swaggerProdUrl && publicBase && !isLocalPublicBase) {
+  swaggerProdUrl = `${publicBase}/api`;
+}
+
+const swaggerServers = [{ url: swaggerLocalUrl, description: 'Local' }];
+if (swaggerProdUrl) {
+  swaggerServers.push({ url: swaggerProdUrl, description: 'Production' });
+}
 
 const swaggerDocument = {
   openapi: '3.0.3',
@@ -13,11 +38,7 @@ const swaggerDocument = {
     ].join(' '),
     version: '1.0.0',
   },
-  servers: [
-    { url: `http://localhost:${config.port}/api`, description: 'Local' },
-    // Optional: set SWAGGER_PROD_URL=https://etqan.nodeteam.site/api
-    ...(process.env.SWAGGER_PROD_URL ? [{ url: process.env.SWAGGER_PROD_URL, description: 'Production' }] : []),
-  ],
+  servers: swaggerServers,
   tags: [
     { name: 'Auth', description: 'Register, Login' },
     { name: 'OTP', description: 'Verify & Resend OTP' },
